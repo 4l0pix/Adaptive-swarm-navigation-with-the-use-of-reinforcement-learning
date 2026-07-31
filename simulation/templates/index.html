@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Swarm Navigation | Thesis Sandbox</title>
+    <link href="https://fonts.googleapis.com/css2?family=Iceland&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #1a1a1a;
+            --bg-darker: #0d0d0d;
+            --military-red: #8b0000;
+            --military-maroon: #4a0000;
+            --accent-red: #dc3545;
+            --glass-bg: rgba(30, 30, 30, 0.7);
+            --glass-border: rgba(139, 0, 0, 0.4);
+            --glass-highlight: rgba(255, 255, 255, 0.05);
+            --text-primary: #e0e0e0;
+            --text-secondary: #888;
+            --text-muted: #555;
+            --success: #00ff00;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            /* Viewport-relative base units */
+            --base-unit: min(1vw, 1vh);
+            --spacing-xs: calc(var(--base-unit) * 0.4);
+            --spacing-sm: calc(var(--base-unit) * 0.8);
+            --spacing-md: calc(var(--base-unit) * 1.2);
+            --font-xs: clamp(8px, calc(var(--base-unit) * 1), 12px);
+            --font-sm: clamp(10px, calc(var(--base-unit) * 1.2), 14px);
+            --font-md: clamp(12px, calc(var(--base-unit) * 1.5), 18px);
+            --font-lg: clamp(14px, calc(var(--base-unit) * 2), 24px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Iceland', sans-serif;
+            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 50%, var(--military-maroon) 100%);
+            background-size: 200% 200%;
+            animation: breathe 8s ease-in-out infinite;
+            color: var(--text-primary);
+            font-size: var(--font-sm);
+        }
+
+        @keyframes breathe {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Glass Panel Styling */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: calc(var(--base-unit) * 1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Main Container - fills viewport exactly */
+        #dashboard {
+            display: grid;
+            grid-template-columns: 1fr 30vw;
+            grid-template-rows: 2vh 5vh 1fr;
+            gap: var(--spacing-sm);
+            width: 100vw;
+            height: 100vh;
+            padding: var(--spacing-sm);
+        }
+
+        /* Progress Bar */
+        #progress-container {
+            grid-column: 1 / -1;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: calc(var(--base-unit) * 0.3);
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #000000 0%, var(--military-red) 100%);
+            transition: width 0.3s ease;
+            border-radius: calc(var(--base-unit) * 0.3);
+        }
+
+        #progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Iceland', sans-serif;
+            font-size: var(--font-md);
+            color: #ffffff;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            white-space: nowrap;
+        }
+
+        /* Header */
+        #header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 var(--spacing-md);
+        }
+
+        #header h1 {
+            font-family: 'Iceland', sans-serif;
+            font-size: var(--font-lg);
+            color: #ffffff;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15vw;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            font-size: var(--font-xs);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .status-dot {
+            width: calc(var(--base-unit) * 0.8);
+            height: calc(var(--base-unit) * 0.8);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.active { background: var(--success); }
+        .status-dot.idle { background: var(--warning); }
+        .status-dot.error { background: var(--danger); }
+        .status-dot.running-experiments { background: #00ffff; animation: pulse 0.5s infinite; }
+        .status-dot.complete { background: #00ff00; animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Content Area */
+        #main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+            gap: var(--spacing-sm);
+        }
+
+        /* Right Column - Hidden (content moved to sidebar) */
+        #right-column {
+            display: none;
+        }
+
+        /* 3D View Panel */
+        #view-3d-panel {
+            position: relative;
+            overflow: hidden;
+        }
+
+        #view-3d-panel .panel-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #view-3d {
+            width: 100%;
+            height: 100%;
+        }
+
+        .panel-title {
+            font-family: 'Iceland', sans-serif;
+            font-size: var(--font-lg);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1vw;
+            color: #ffffff;
+        }
+
+        /* Statistics Panel */
+        #stats-panel {
+            display: flex;
+            flex-direction: column;
+            padding: var(--spacing-sm);
+            gap: var(--spacing-xs);
+            overflow-y: auto;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-xs);
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: calc(var(--base-unit) * 0.4);
+            padding: var(--spacing-xs);
+            text-align: center;
+        }
+
+        .stat-box.full-width {
+            grid-column: span 2;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: var(--font-sm);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: var(--font-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.03vw;
+            color: var(--text-secondary);
+            margin-top: 1px;
+        }
+
+        /* Swarm Mode Indicator */
+        .swarm-mode {
+            padding: var(--spacing-xs);
+            text-align: center;
+            border-radius: calc(var(--base-unit) * 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .swarm-mode.offensive { 
+            background: linear-gradient(135deg, rgba(0, 255, 0, 0.3) 0%, rgba(0, 255, 0, 0.1) 100%);
+            border: 1px solid rgba(0, 255, 0, 0.5);
+        }
+        .swarm-mode.neutral { 
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3) 0%, rgba(0, 255, 255, 0.1) 100%);
+            border: 1px solid rgba(0, 255, 255, 0.5);
+        }
+        .swarm-mode.defensive { 
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.3) 0%, rgba(220, 53, 69, 0.1) 100%);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+        }
+
+        .swarm-mode-label {
+            font-size: var(--font-xs);
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .swarm-mode-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: var(--font-sm);
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        /* HeatMap Panel (compact, in right column) */
+        #heatmap-panel {
+            padding: var(--spacing-sm);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #heatmap-canvas-container {
+            width: 100%;
+            aspect-ratio: 1;
+            position: relative;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: calc(var(--base-unit) * 0.4);
+            overflow: hidden;
+            margin-top: var(--spacing-xs);
+        }
+
+        #map-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            overflow-y: auto;
+        }
+
+        .sidebar-top-row {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .sidebar-top-row > section {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #stats-panel.full-width {
+            width: 100%;
+        }
+
+        /* Grid Exploration Panel */
+        #grid-exploration-panel {
+            padding: var(--spacing-sm);
+        }
+
+        /* Sector exploration grid removed */
+
+        /* Controls Panel */
+        #controls-panel {
+            padding: var(--spacing-sm);
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border: none;
+            border-radius: calc(var(--base-unit) * 0.3);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            font-size: var(--font-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.03vw;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--military-red) 0%, var(--military-maroon) 100%);
+            color: white;
+            border: 1px solid var(--military-red);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--accent-red) 0%, var(--military-red) 100%);
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #00cc00 100%);
+            color: white;
+            border: 1px solid var(--success);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, #bd2130 100%);
+            color: white;
+            border: 1px solid var(--danger);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .btn-small {
+            padding: 2px 6px;
+            font-size: calc(var(--font-xs) * 0.9);
+            min-width: auto;
+        }
+
+        /* Environments Table */
+        .env-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-xs);
+        }
+
+        .env-table th,
+        .env-table td {
+            padding: var(--spacing-xs);
+            text-align: center;
+            border: 1px solid var(--glass-border);
+        }
+
+        .env-table th {
+            background: rgba(139, 0, 0, 0.3);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            font-size: calc(var(--font-xs) * 0.85);
+        }
+
+        .env-table td {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .env-table tr:hover td {
+            background: rgba(139, 0, 0, 0.2);
+        }
+
+        /* Mini 3D Environment Cube */
+        .env-cube-container {
+            width: 60px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-radius: 4px;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+        }
+
+        .env-cube-container:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+            border-color: var(--military-red);
+        }
+
+        .env-cube-canvas {
+            width: 50px;
+            height: 50px;
+        }
+
+        .env-cube-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 2px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .env-cube-delete {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 14px;
+            height: 14px;
+            background: var(--danger);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .env-cube-container:hover .env-cube-delete {
+            display: flex;
+        }
+
+        /* Manual Path Panel */
+        #manual-path-panel {
+            padding: var(--spacing-sm);
+        }
+
+        .path-controls {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+        }
+
+        .path-input-row {
+            display: flex;
+            gap: var(--spacing-xs);
+            align-items: center;
+        }
+
+        .path-input-row input {
+            flex: 1;
+            padding: var(--spacing-xs);
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 2px;
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: var(--font-xs);
+        }
+
+        .path-input-row label {
+            font-size: var(--font-xs);
+            color: var(--text-secondary);
+            min-width: 1.5vw;
+        }
+
+        .path-waypoints {
+            max-height: 8vh;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 2px;
+            padding: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+        }
+
+        .waypoint-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 0;
+            font-size: var(--font-xs);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .waypoint-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Agent Deployment */
+        #deploy-panel {
+            padding: var(--spacing-sm);
+        }
+
+        .nest-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+            padding: var(--spacing-xs);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: calc(var(--base-unit) * 0.4);
+        }
+
+        .nest-icon {
+            width: calc(var(--base-unit) * 2);
+            height: calc(var(--base-unit) * 2);
+            background: var(--military-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-xs);
+        }
+
+        .nest-coords {
+            font-family: 'Orbitron', sans-serif;
+            font-size: var(--font-xs);
+        }
+
+        /* Path Legend */
+        .path-legend {
+            display: none;
+            margin-top: var(--spacing-xs);
+            padding: var(--spacing-xs);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: calc(var(--base-unit) * 0.4);
+        }
+
+        .path-legend.visible {
+            display: block;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: var(--font-xs);
+            margin-bottom: 2px;
+        }
+
+        .legend-color {
+            width: calc(var(--base-unit) * 0.8);
+            height: calc(var(--base-unit) * 0.8);
+            border-radius: 1px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: calc(var(--base-unit) * 0.4);
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--military-red);
+            border-radius: 2px;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .zoom-btn {
+            width: calc(var(--base-unit) * 5);
+            height: calc(var(--base-unit) * 5);
+            min-width: 40px;
+            min-height: 40px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            font-size: calc(var(--font-md) * 1.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .zoom-btn:hover {
+            background: var(--military-red);
+            border-color: var(--military-red);
+        }
+
+        /* Experiments Panel */
+        #experiments-panel {
+            padding: var(--spacing-sm);
+        }
+
+        #experiments-status, #experiments-results {
+            font-size: var(--font-xs);
+        }
+
+        #experiments-summary {
+            max-height: 10vh;
+            overflow-y: auto;
+        }
+
+        /* Experiment Results Table */
+        .exp-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-xs);
+        }
+
+        .exp-results-table th,
+        .exp-results-table td {
+            padding: var(--spacing-xs);
+            text-align: center;
+            border: 1px solid var(--glass-border);
+        }
+
+        .exp-results-table th {
+            background: rgba(139, 0, 0, 0.3);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            font-size: calc(var(--font-xs) * 0.9);
+        }
+
+        .exp-results-table td {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .exp-results-table tr:hover td {
+            background: rgba(139, 0, 0, 0.2);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-container {
+            width: 80vw;
+            max-width: 900px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .modal-header h2 {
+            font-size: var(--font-md);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-size: var(--font-sm);
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--military-red);
+            border-color: var(--military-red);
+        }
+
+        .modal-body {
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-controls {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .control-group label {
+            font-size: var(--font-xs);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .control-group select,
+        .control-group input[type="file"] {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: var(--font-sm);
+        }
+
+        .modal-viz-container {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .modal-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: calc(var(--base-unit) * 0.4);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-xs);
+            font-size: var(--font-sm);
+        }
+
+        .stat-row span:first-child {
+            color: var(--text-secondary);
+        }
+
+        .stat-row span:last-child {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--text-primary);
+        }
+
+        /* Welcome Screen */
+        #welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .welcome-container {
+            padding: calc(var(--spacing-md) * 3);
+            text-align: center;
+            max-width: 500px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .welcome-container h1 {
+            font-family: 'Iceland', sans-serif;
+            font-size: calc(var(--font-lg) * 1.5);
+            color: #ffffff;
+            margin-bottom: var(--spacing-sm);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .welcome-container p {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-sm);
+        }
+
+        .welcome-input-group {
+            margin: var(--spacing-md) 0;
+        }
+
+        .welcome-input-group label {
+            display: block;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+            font-size: var(--font-sm);
+        }
+
+        .welcome-input-group input {
+            width: 150px;
+            padding: var(--spacing-sm);
+            font-size: var(--font-md);
+            font-family: 'Iceland', sans-serif;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--glass-border);
+            border-radius: calc(var(--base-unit) * 0.5);
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .welcome-input-group input:focus {
+            border-color: var(--military-red);
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+        }
+
+        .welcome-hint {
+            font-size: var(--font-xs) !important;
+            color: var(--text-muted) !important;
+            line-height: 1.4;
+            margin-top: var(--spacing-md);
+        }
+
+        #btn-start-session {
+            padding: var(--spacing-sm) calc(var(--spacing-md) * 2);
+            font-size: var(--font-md);
+            font-family: 'Iceland', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--military-red) 0%, var(--military-maroon) 100%);
+            border: 2px solid var(--military-red);
+            border-radius: calc(var(--base-unit) * 0.5);
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #btn-start-session:hover {
+            background: linear-gradient(135deg, var(--accent-red) 0%, var(--military-red) 100%);
+            box-shadow: 0 0 20px rgba(139, 0, 0, 0.6);
+            transform: scale(1.02);
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- Welcome Screen -->
+    <div id="welcome-screen">
+        <div class="welcome-container glass-panel">
+            <h1>Adaptive Swarm Navigation</h1>
+            <p>BSc Thesis Simulation Sandbox &middot; Version 0.5</p>
+            <div class="welcome-input-group">
+                <label for="num-experiments">Number of Exploration Tests:</label>
+                <input type="number" id="num-experiments" value="10" min="1" max="100" step="1">
+            </div>
+            <div class="welcome-input-group">
+                <label for="paths-per-test">Paths per Test:</label>
+                <input type="number" id="paths-per-test" value="100" min="10" max="500" step="10">
+            </div>
+            <p class="welcome-hint">Boids coordination &middot; RL-guided formation adaptation &middot; threat-aware pathfinding</p>
+            <p class="welcome-hint">Each test explores until the map is complete, then evaluates the selected paths.</p>
+            <button id="btn-start-session" class="btn-primary">Enter Command Center</button>
+        </div>
+    </div>
+
+    <div id="dashboard" style="display: none;">
+        <!-- Progress Bar -->
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+            <span id="progress-text">Exploration: 0% | Experiments: 0/0</span>
+        </div>
+
+        <!-- Header -->
+        <header id="header" class="glass-panel">
+            <h1>Swarm Command Center <span style="font-size: 0.45em; opacity: 0.7;">v0.5</span></h1>
+            <div class="header-status">
+                <div class="status-indicator">
+                    <span class="status-dot idle" id="sim-status-dot"></span>
+                    <span id="sim-status-text">Standby</span>
+                </div>
+                <span id="sim-time">T+ 00:00:00</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- 3D View -->
+            <section id="view-3d-panel" class="glass-panel">
+                <div class="panel-header">
+                    <span class="panel-title">3D Environment View</span>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <button class="zoom-btn" id="btn-fog-toggle" title="Toggle The Veil" style="font-size: 1rem;">&#128065;</button>
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" id="btn-zoom-in" title="Zoom In">+</button>
+                            <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+                            <button class="zoom-btn" id="btn-zoom-reset" title="Reset View">⌂</button>
+                        </div>
+                        <span id="agent-count-badge">15 Agents</span>
+                    </div>
+                </div>
+                <div id="view-3d"></div>
+            </section>
+
+            <!-- Right Column: Empty now, content moved to sidebar -->
+            <div id="right-column">
+            </div> <!-- End right-column -->
+        </main>
+
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <!-- Top Row: HeatMap (sector exploration removed) -->
+            <div class="sidebar-top-row">
+                <!-- HeatMap Panel -->
+                <section id="heatmap-panel" class="glass-panel">
+                    <span class="panel-title">Threat HeatMap</span>
+                    <div id="heatmap-canvas-container">
+                        <canvas id="map-canvas"></canvas>
+                    </div>
+                    <div class="path-legend" id="path-legend">
+                        <div class="legend-item"><span class="legend-color" style="background: #8b0000;"></span>Dijkstra</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #dc143c;"></span>A*</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #ff4444;"></span>Safety First</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #ff6b6b;"></span>Balanced</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Statistics Panel - Full Width -->
+            <section id="stats-panel" class="glass-panel full-width">
+                <span class="panel-title">Swarm Statistics</span>
+                
+                <div class="swarm-mode neutral" id="swarm-mode-indicator">
+                    <div class="swarm-mode-label">Swarm Formation Mode</div>
+                    <div class="swarm-mode-value" id="swarm-mode-text">NEUTRAL</div>
+                </div>
+
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-offensive" style="color: #00ff00;">0</div>
+                        <div class="stat-label">Offensive</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-neutral" style="color: #00ffff;">0</div>
+                        <div class="stat-label">Neutral</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-defensive" style="color: #dc3545;">0</div>
+                        <div class="stat-label">Defensive</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">Total Agents</div>
+                    </div>
+                    <div class="stat-box full-width">
+                        <div class="stat-value" id="stat-exploration">0.0%</div>
+                        <div class="stat-label">Total Exploration</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-fitness">0.00</div>
+                        <div class="stat-label">Avg Fitness</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-violations">0</div>
+                        <div class="stat-label">Violations</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Controls -->
+            <section id="controls-panel" class="glass-panel">
+                <span class="panel-title">Simulation Control</span>
+                <div class="control-buttons">
+                    <button class="btn btn-danger" id="btn-stop" disabled>Pause</button>
+                    <button class="btn btn-primary" id="btn-view-stats">View Statistics</button>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- Experiment Results Modal -->
+    <div id="results-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-container glass-panel">
+            <div class="modal-header">
+                <h2 class="panel-title">Experiment Results Viewer</h2>
+                <button class="modal-close" id="btn-close-modal">X</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-controls">
+                    <div class="control-group">
+                        <label>Visualization Type:</label>
+                        <select id="viz-type-select">
+                            <option value="bar">Bar Chart - Path Lengths</option>
+                            <option value="bar-cost">Bar Chart - Path Costs</option>
+                            <option value="success">Success Rate Comparison</option>
+                            <option value="table">Data Table</option>
+                            <option value="scatter">Scatter Plot (Length vs Cost)</option>
+                            <option value="rl">RL Policy Evaluation</option>
+                            <option value="hp">Boids HP RL (ws, wa, wc)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Load CSV/JSON:</label>
+                        <input type="file" id="csv-upload" accept=".csv,.json">
+                    </div>
+                </div>
+                <div class="modal-viz-container">
+                    <div id="modal-chart-container" style="height: 300px; position: relative;">
+                        <canvas id="modal-chart"></canvas>
+                    </div>
+                    <div id="modal-table-container" style="display: none; max-height: 300px; overflow-y: auto;"></div>
+                </div>
+                <div class="modal-stats" id="modal-stats">
+                    <div class="stat-row">
+                        <span>Total Experiments:</span>
+                        <span id="modal-total-exp">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Best Algorithm (Length):</span>
+                        <span id="modal-best-length">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Best Algorithm (Cost):</span>
+                        <span id="modal-best-cost">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this research artifact, please cite the thesis and the software."
+title: "Adaptive Swarm Navigation with Reinforcement Learning: Simulation Sandbox"
+type: software
+version: "0.5"
+date-released: 2026-07-31
+authors:
+  - family-names: Koukousias
+    given-names: Athanasios
+abstract: >-
+  The companion simulator for a BSc thesis on swarms that explore an unknown
+  three-dimensional environment, adapt their collective behavior with
+  reinforcement learning, and plan routes that balance distance and threat.
+keywords:
+  - swarm intelligence
+  - reinforcement learning
+  - boids
+  - path planning
+  - multi-agent systems
+license: MIT

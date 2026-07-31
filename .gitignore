@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+node_modules/
+
+# Generated experiment artifacts
+simulation/pathfinding_experiments_*.csv
+simulation/aggregated_experiments_*.csv
+simulation/aggregated_experiments_*.json
+simulation/comparison_*.csv
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local scratch output
+tmp/
+
+# The thesis is distributed through the University of Thessaly Library
+docs/thesis/*.pdf

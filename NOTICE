@@ -1,0 +1,21 @@
+Adaptive Swarm Navigation with Reinforcement Learning
+Copyright (c) 2026 Athanasios Koukousias
+
+The simulation source in this repository was reorganized from the `0.5/`
+directory of:
+
+  https://github.com/4l0pix/Optimal-Swarm-Formation-For-Problem-Solving
+
+Source snapshot: commit bbc670182b026a29de66c0a7f418e1085a9d6748
+Snapshot date: 2026-03-13
+
+The upstream project did not expose version 0.5 as a Git tag; `0.5/` is the
+versioned source directory. Repository presentation, tests, CI, licensing
+metadata, and documentation were added for this thesis artifact.
+
+Third-party browser dependencies are loaded from their respective CDNs and
+remain under their own licenses:
+
+- Three.js: MIT License
+- Chart.js: MIT License
+- Google Fonts (Iceland and Orbitron): SIL Open Font License 1.1

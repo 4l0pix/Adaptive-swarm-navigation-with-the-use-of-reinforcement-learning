@@ -1,0 +1,12 @@
+{
+  "name": "adaptive-swarm-navigation-thesis-artifact",
+  "private": true,
+  "version": "0.5.0",
+  "description": "Browser capture tooling for the Adaptive Swarm Navigation thesis sandbox",
+  "scripts": {
+    "screenshots": "playwright install chromium && node scripts/capture_screenshots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
+}
