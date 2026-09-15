@@ -1,7 +1,8 @@
 import numpy as np
 
 class Agent:
-    def __init__(self, position, velocity, max_speed=2.0, max_force=0.03, profile=None):
+    def __init__(self, position, velocity, max_speed=2.0, max_force=0.03, profile=None, *, rng=None):
+        self.rng = rng
         self.position = np.array(position, dtype=float)
         self.velocity = np.array(velocity, dtype=float)
         self.acceleration = np.zeros(3)
@@ -134,20 +135,25 @@ class Agent:
 
         return np.zeros(3)
     
-    def assess_threat_level(self):
+    def assess_threat_level(self, radius=None):
         """Assess current threat level at agent's position"""
         if self.exploration_map is None:
             return 0.0
             
         # Convert position to grid coordinates
-        from utils import THREAT_RADIUS_CHECK
+        if __package__:
+            from .utils import THREAT_RADIUS_CHECK
+        else:
+            from utils import THREAT_RADIUS_CHECK
+        if radius is None:
+            radius = THREAT_RADIUS_CHECK
         grid_x = int(self.position[0] / self.exploration_map.cell_size_x)
         grid_y = int(self.position[1] / self.exploration_map.cell_size_y)
         
         # Check average threat in surrounding area
         threat_sum = 0.0
         threat_count = 0
-        radius_cells = int(THREAT_RADIUS_CHECK / min(self.exploration_map.cell_size_x, 
+        radius_cells = int(radius / min(self.exploration_map.cell_size_x,
                                                    self.exploration_map.cell_size_y))
         
         for i in range(max(0, grid_x - radius_cells),
@@ -162,7 +168,10 @@ class Agent:
     
     def update_profile_based_on_threat(self, profiles):
         """Dynamically update profile based on current threat level"""
-        from utils import HIGH_THREAT_THRESHOLD, LOW_THREAT_THRESHOLD
+        if __package__:
+            from .utils import HIGH_THREAT_THRESHOLD, LOW_THREAT_THRESHOLD
+        else:
+            from utils import HIGH_THREAT_THRESHOLD, LOW_THREAT_THRESHOLD
         
         current_threat = self.assess_threat_level()
         
@@ -255,7 +264,10 @@ class Agent:
         distance = np.linalg.norm(self.position - self.assigned_target)
         
         # Normalize distance by environment size for consistency
-        from utils import ENV_WIDTH, ENV_HEIGHT
+        if __package__:
+            from .utils import ENV_WIDTH, ENV_HEIGHT
+        else:
+            from utils import ENV_WIDTH, ENV_HEIGHT
         max_distance = np.sqrt(ENV_WIDTH**2 + ENV_HEIGHT**2)
         normalized_distance = distance / max_distance
         
@@ -391,8 +403,10 @@ class Agent:
     def choose_hp_action(self, greedy=False):
         state = self.get_hp_state()
         s = self._hp_state_to_str(state)
-        if not greedy and np.random.rand() < self.hp_epsilon:
-            return np.random.randint(self.hp_action_count)
+        rng = self.rng if self.rng is not None else np.random
+        if not greedy and rng.random() < self.hp_epsilon:
+            return int(rng.integers(self.hp_action_count) if self.rng is not None
+                       else rng.randint(self.hp_action_count))
         if s not in self.q_table_hp:
             self.q_table_hp[s] = np.zeros(self.hp_action_count)
         return int(np.argmax(self.q_table_hp[s]))

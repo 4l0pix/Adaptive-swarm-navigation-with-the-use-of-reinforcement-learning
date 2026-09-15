@@ -5,7 +5,7 @@ Thank you for taking an interest in this research artifact. Small, focused pull 
 ## Local setup
 
 1. Create and activate a Python 3.11+ virtual environment.
-2. Run `python -m pip install -r requirements.txt`.
+2. Run `python -m pip install -e '.[web]'`.
 3. Run `python -m unittest discover -s tests -v` before making changes.
 4. Start the sandbox with `python simulation/app.py` and verify browser-facing changes at `http://127.0.0.1:5000`.
 
@@ -13,6 +13,8 @@ Thank you for taking an interest in this research artifact. Small, focused pull 
 
 - Explain the research or software behavior being changed.
 - Add or update a smoke test when behavior changes.
+- Keep new research interfaces in `src/swarm_nav/`; policies and dynamics should be usable without Flask.
+- Use per-run random generators and test repeatability when adding stochastic behavior.
 - Do not commit generated CSV/JSON runs unless they are intentionally curated into `data/` and documented.
 - Keep research claims traceable to the thesis, included data, or a clearly cited source.
 - Preserve the separation between the MIT-licensed software and CC BY 4.0 thesis/content.

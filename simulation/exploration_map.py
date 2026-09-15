@@ -1,5 +1,8 @@
 import numpy as np
-from utils import MAP_RESOLUTION, THREAT_DETECTION_RADIUS, ENV_DEPTH
+if __package__:
+    from .utils import MAP_RESOLUTION, THREAT_DETECTION_RADIUS, ENV_DEPTH
+else:
+    from utils import MAP_RESOLUTION, THREAT_DETECTION_RADIUS, ENV_DEPTH
 
 # 3D Exploration grid resolution
 EXPLORATION_3D_RESOLUTION = 25  # 25x25x25 grid
@@ -7,19 +10,24 @@ EXPLORATION_3D_RESOLUTION = 25  # 25x25x25 grid
 class ExplorationMap:
     """Shared memory system tracking explored areas and obstacle threats"""
 
-    def __init__(self, width, height, obstacles):
+    def __init__(self, width, height, obstacles, *, depth=ENV_DEPTH,
+                 resolution=MAP_RESOLUTION, resolution_3d=EXPLORATION_3D_RESOLUTION,
+                 threat_radius=THREAT_DETECTION_RADIUS):
         self.width = width
         self.height = height
-        self.depth = ENV_DEPTH  # Z dimension
-        self.resolution = MAP_RESOLUTION
+        self.depth = depth
+        self.resolution = resolution
+        self.resolution_3d = resolution_3d
+        self.threat_radius = threat_radius
         self.obstacles = obstacles
 
         # Create grid for exploration tracking (True = explored) - 2D for threat map
         self.explored_grid = np.zeros((self.resolution, self.resolution), dtype=bool)
         
         # 3D exploration grid for pathfinding (True = explored/traversable)
-        self.explored_grid_3d = np.zeros((EXPLORATION_3D_RESOLUTION, EXPLORATION_3D_RESOLUTION, EXPLORATION_3D_RESOLUTION), dtype=bool)
-        self.cell_size_3d = width / EXPLORATION_3D_RESOLUTION  # Assuming cubic cells
+        self.explored_grid_3d = np.zeros((resolution_3d,) * 3, dtype=bool)
+        self.cell_sizes_3d = np.array([width, height, depth]) / resolution_3d
+        self.cell_size_3d = self.cell_sizes_3d[0]  # Legacy cubic-world accessor
 
         # Create threat intensity map (0 = safe, higher = more dangerous)
         self.threat_map = self._compute_threat_map()
@@ -44,10 +52,10 @@ class ExplorationMap:
                     obs_x, obs_y = obs['position'][0], obs['position'][1]
                     dist = np.sqrt((x - obs_x)**2 + (y - obs_y)**2)
 
-                    if dist < THREAT_DETECTION_RADIUS:
+                    if dist < self.threat_radius:
                         # Each obstacle is a heat source with base intensity of 1.0
                         # Heat decreases with distance but obstacle center is always 1.0
-                        heat_intensity = 1.0 - (dist / THREAT_DETECTION_RADIUS)
+                        heat_intensity = 1.0 - (dist / self.threat_radius)
                         threat += heat_intensity
 
                 threat_map[j, i] = threat
@@ -79,42 +87,38 @@ class ExplorationMap:
         x, y, z = position[0], position[1], position[2] if len(position) > 2 else self.depth / 2
         
         # Convert to 3D grid coordinates
-        grid_x = int(x / self.cell_size_3d)
-        grid_y = int(y / self.cell_size_3d)
-        grid_z = int(z / self.cell_size_3d)
+        grid_x, grid_y, grid_z = (np.array([x, y, z]) / self.cell_sizes_3d).astype(int)
         
         # Radius in cells
-        radius_cells = int(radius / self.cell_size_3d)
+        radii = (radius / self.cell_sizes_3d).astype(int)
         
-        for i in range(max(0, grid_x - radius_cells),
-                      min(EXPLORATION_3D_RESOLUTION, grid_x + radius_cells + 1)):
-            for j in range(max(0, grid_y - radius_cells),
-                          min(EXPLORATION_3D_RESOLUTION, grid_y + radius_cells + 1)):
-                for k in range(max(0, grid_z - radius_cells),
-                              min(EXPLORATION_3D_RESOLUTION, grid_z + radius_cells + 1)):
+        for i in range(max(0, grid_x - radii[0]),
+                      min(self.resolution_3d, grid_x + radii[0] + 1)):
+            for j in range(max(0, grid_y - radii[1]),
+                          min(self.resolution_3d, grid_y + radii[1] + 1)):
+                for k in range(max(0, grid_z - radii[2]),
+                              min(self.resolution_3d, grid_z + radii[2] + 1)):
                     # Check if within spherical radius
                     dx = i - grid_x
                     dy = j - grid_y
                     dz = k - grid_z
-                    if dx*dx + dy*dy + dz*dz <= radius_cells * radius_cells:
+                    if sum((np.array([dx, dy, dz]) * self.cell_sizes_3d) ** 2) <= radius ** 2:
                         self.explored_grid_3d[i, j, k] = True
     
     def is_explored_3d(self, x, y, z):
         """Check if a 3D position has been explored"""
-        grid_x = int(x / self.cell_size_3d)
-        grid_y = int(y / self.cell_size_3d)
-        grid_z = int(z / self.cell_size_3d)
+        grid_x, grid_y, grid_z = (np.array([x, y, z]) / self.cell_sizes_3d).astype(int)
         
         # Clamp to grid bounds
-        grid_x = max(0, min(EXPLORATION_3D_RESOLUTION - 1, grid_x))
-        grid_y = max(0, min(EXPLORATION_3D_RESOLUTION - 1, grid_y))
-        grid_z = max(0, min(EXPLORATION_3D_RESOLUTION - 1, grid_z))
+        grid_x = max(0, min(self.resolution_3d - 1, grid_x))
+        grid_y = max(0, min(self.resolution_3d - 1, grid_y))
+        grid_z = max(0, min(self.resolution_3d - 1, grid_z))
         
         return self.explored_grid_3d[grid_x, grid_y, grid_z]
     
     def get_3d_exploration_percentage(self):
         """Calculate percentage of 3D space explored"""
-        total_cells = EXPLORATION_3D_RESOLUTION ** 3
+        total_cells = self.resolution_3d ** 3
         explored_cells = np.sum(self.explored_grid_3d)
         return (explored_cells / total_cells) * 100
 
@@ -204,4 +208,3 @@ class ExplorationMap:
         world_y = (min_idx[0] + 0.5) * self.cell_size_y
         
         return np.array([world_x, world_y]), min_threat
-

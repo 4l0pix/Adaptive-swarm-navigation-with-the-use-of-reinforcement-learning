@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import os
+import random
 import sys
 import unittest
 from pathlib import Path
@@ -28,6 +29,7 @@ class SimulationSmokeTests(unittest.TestCase):
 
     def setUp(self) -> None:
         np.random.seed(7)
+        random.seed(7)
         response = self.client.post("/init")
         self.assertEqual(response.status_code, 200)
 

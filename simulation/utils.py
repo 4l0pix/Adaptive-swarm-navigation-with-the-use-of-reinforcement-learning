@@ -1,6 +1,10 @@
 import numpy as np
-from agent import Agent
-from profiles import *
+if __package__:
+    from .agent import Agent
+    from .profiles import *
+else:
+    from agent import Agent
+    from profiles import *
 
 # ===== SIMULATION CONSTANTS =====
 

@@ -1,6 +1,6 @@
 # Adaptive Swarm Navigation with Reinforcement Learning
 
-This repository brings together my BSc thesis, the version 0.5 simulation sandbox, and the experiment data behind the project. The work was completed at the Department of Computer Science and Telecommunications, University of Thessaly, under the supervision of Associate Professor Konstantinos Kolomvatsos.
+This repository brings together my BSc thesis, the version 0.5 simulation sandbox, a modular Python research API (v0.6), and the experiment data behind the project. The work was completed at the Department of Computer Science and Telecommunications, University of Thessaly, under the supervision of Associate Professor Konstantinos Kolomvatsos.
 
 <p align="center">
   <a href="https://ir.lib.uth.gr/xmlui/"><img alt="Thesis at the UTH Library" src="https://img.shields.io/badge/thesis-UTH_Library-b42318?style=flat-square"></a>
@@ -11,6 +11,7 @@ This repository brings together my BSc thesis, the version 0.5 simulation sandbo
 </p>
 
 <p align="center">
+  <a href="docs/python-api.md">Python research API</a> ·
   <a href="#run-it-locally">Run the sandbox</a> ·
   <a href="docs/architecture.md">Architecture</a> ·
   <a href="data/README.md">Experiment data</a> ·
@@ -83,17 +84,51 @@ The browser view is connected to the running simulation, so it shows the researc
   </tr>
 </table>
 
+## Build a new research experiment
+
+The `swarm_nav` Python package lets you build a world, generate and edit obstacles,
+deploy agents, and choose a profile policy directly from a script or notebook.
+
+```bash
+python -m pip install -e .
+```
+
+```python
+from swarm_nav import (
+    DynamicProfiles, Simulation, build_environment, deploy_swarm, generate_obstacles,
+)
+
+world = build_environment(width=600, height=400, depth=200, seed=42)
+obstacles = generate_obstacles(
+    world, count=20, width_range=(5, 12), height_range=(40, 180), margin=30,
+)
+world.add_obstacles(obstacles)
+world.update_obstacle(obstacles[0].id, height=150)
+
+swarm = deploy_swarm(world, agent_count=15, position=(10, 200, 100))
+simulation = Simulation(world, swarm, profile_policy=DynamicProfiles())
+state = simulation.step(100)
+print(state["metrics"])
+```
+
+Use `build_simulation(SimulationConfig(...))` to compose a complete seeded run.
+Profile policies and motion models are replaceable Python objects. The library
+runs without a browser or background thread; the existing sandbox remains
+available separately. See the [Python API guide](docs/python-api.md) for the
+configuration reference, planner adapters, reproducibility boundaries, and
+examples of custom policies. Runnable scripts are in [`examples/`](examples/).
+
 ## Run it locally
 
 You need Python 3.11 or newer and a current desktop browser. The interface loads Three.js, Chart.js, and its fonts from public CDNs, so the first browser load also needs an internet connection.
 
 ```bash
-git clone <your-new-repository-url>
-cd Swarm-Thesis
+git clone https://github.com/4l0pix/Adaptive-swarm-navigation-with-the-use-of-reinforcement-learning.git
+cd Adaptive-swarm-navigation-with-the-use-of-reinforcement-learning
 
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
-python -m pip install -r requirements.txt
+python -m pip install -e '.[web]'
 python simulation/app.py
 ```
 
@@ -110,20 +145,22 @@ Useful environment variables:
 
 ## Run the checks
 
-The smoke tests import the simulation, render the main page, initialize a world, advance the swarm, and make sure all four pathfinders return usable results.
+The tests cover seeded research runs, editable obstacles, deployment, policy and dynamics extensions, planner isolation, and the existing browser API smoke contracts.
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The same command runs in GitHub Actions on Python 3.11 and 3.12. A fast syntax check is also available with `python -m compileall -q simulation tests`.
+The same command runs in GitHub Actions on Python 3.11 and 3.12, together with both research examples. A fast syntax check is also available with `python -m compileall -q src simulation tests examples`.
 
 ## Project layout
 
 ```text
 .
-├── simulation/                  # Flask API, swarm model, planning, and web UI
-├── tests/                       # Deterministic application smoke tests
+├── src/swarm_nav/                # Public Python API, configurations, and extension contracts
+├── simulation/                  # Shared thesis algorithms and existing Flask sandbox
+├── examples/                    # Runnable research scripts and custom policies
+├── tests/                       # Research contracts and application smoke tests
 ├── data/                        # Archived aggregate pathfinding results
 ├── docs/
 │   ├── thesis/                  # Library access and citation guidance
@@ -162,7 +199,7 @@ BibTeX and licensing guidance for the document are available in [`docs/thesis/RE
 
 ## Licensing
 
-- Source code in `simulation/`, `tests/`, and `.github/` is released under the [MIT License](LICENSE).
+- Source code in `src/`, `simulation/`, `examples/`, `tests/`, and `.github/` is released under the [MIT License](LICENSE).
 - Original repository documentation and media are released under [CC BY 4.0](LICENSE-CONTENT.md), except where third-party material is separately credited.
 - The imported simulator provenance is recorded in [NOTICE](NOTICE).
 

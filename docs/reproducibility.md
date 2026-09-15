@@ -23,8 +23,8 @@ Set up and verify the local environment:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m compileall -q simulation tests
+python -m pip install -e '.[web]'
+python -m compileall -q src simulation tests examples
 python -m unittest discover -s tests -v
 ```
 
@@ -56,7 +56,23 @@ I kept this CSV as a record of one complete experiment batch. A new simulator ru
 
 ## Determinism boundaries
 
-The smoke tests seed NumPy and turn off the asynchronous background loop, which keeps the short checks repeatable. Long browser-driven experiments are not guaranteed to be identical down to every value: thread timing, floating-point libraries, random world generation, and browser timing can all influence a run.
+The browser smoke tests seed NumPy and Python's `random` module and turn off the
+asynchronous background loop. Long browser-driven experiments are not guaranteed
+to be identical down to every value: thread timing, floating-point libraries,
+random world generation, and browser timing can all influence a run.
+
+For new research, use the [Python API](python-api.md). Its builders use separate
+random generators per world/deployment/agent, and `Simulation.step(n)` advances
+exactly `n` ticks. Tests compare complete states and maps across interleaved runs
+with the same seed. Keep the configuration, builder call order, component code,
+dependency versions, and seed fixed. Save the initial and final state with
+`Simulation.save`, supplying the code revision and study metadata. For a complete
+dependency record, retain the output of `python -m pip freeze` with your study.
+
+The v0.6 research baseline changes profile-weight synchronization, deployment
+validation, rectangular-map coordinates, and world boundary handling. It does not
+claim to reproduce the archived v0.5 CSV. Its default dynamics still use velocity
+per discrete tick; the reported clock is not a physical integration timestep.
 
 ## Refresh the screenshots
 

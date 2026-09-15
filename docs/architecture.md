@@ -1,5 +1,34 @@
 # How the simulator is put together
 
+## Python research API (v0.6)
+
+`src/swarm_nav/` provides an importable library over the shared thesis algorithms.
+Its public interface is documented in [Python research API](python-api.md).
+
+```text
+Research script / notebook
+  ├── build_environment → Environment + exploration map
+  ├── generate_obstacles → Obstacle objects → Environment.add_obstacles
+  ├── deploy_swarm      → Swarm + independent agents
+  └── Simulation
+        ├── ProfilePolicy.select → per-agent movement profile
+        ├── Dynamics.advance     → one movement tick
+        ├── map updates          → discovered cells
+        └── snapshot / save      → metrics and run artifacts
+
+ThesisPlanner.plan → existing XY planner + isolated profile settings
+```
+
+Configuration lives in frozen dataclasses. Each environment owns independent
+obstacle and deployment random streams; agents own their learning random streams.
+The library imports the existing `Agent`, exploration map, Boids functions, and
+planner implementations through the `simulation` package. It does not import
+`simulation/app.py`. The browser remains on its existing workflow, and the Python
+API can be used without Flask installed. No REST run registry or server migration
+is required to run a research script.
+
+## Browser sandbox (v0.5)
+
 I kept version 0.5 fairly small. Python holds the world state and performs the swarm, learning, and pathfinding calculations. The browser turns that state into the live command-center view and starts the experiment cycles.
 
 ```mermaid

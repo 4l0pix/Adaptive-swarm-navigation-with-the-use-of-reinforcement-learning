@@ -10,7 +10,10 @@ All algorithms consider:
 import numpy as np
 import heapq
 from collections import defaultdict
-from profiles import OFFENSIVE, NEUTRAL, DEFENSIVE
+if __package__:
+    from .profiles import OFFENSIVE, NEUTRAL, DEFENSIVE
+else:
+    from profiles import OFFENSIVE, NEUTRAL, DEFENSIVE
 
 class PathFinder:
     """Handles pathfinding through the exploration map's threat grid"""
@@ -22,7 +25,7 @@ class PathFinder:
         
         # 3D pathfinding settings
         self.use_3d_exploration = True  # Block paths through unexplored 3D cells
-        self.grid_size_3d = 25  # 3D grid resolution (matches frontend)
+        self.grid_size_3d = exploration_map.explored_grid_3d.shape[0]
         
         # Threat tolerance threshold for balanced algorithm
         # Above this threshold, prioritize safety; below it, prioritize speed
@@ -77,9 +80,9 @@ class PathFinder:
         # Check if any Z-level at this XY has been explored
         if hasattr(self.exploration_map, 'explored_grid_3d'):
             # Convert to 3D grid coordinates
-            cell_size_3d = self.exploration_map.cell_size_3d
-            gx = int(world_x / cell_size_3d)
-            gy = int(world_y / cell_size_3d)
+            cell_sizes = self.exploration_map.cell_sizes_3d
+            gx = int(world_x / cell_sizes[0])
+            gy = int(world_y / cell_sizes[1])
             
             gx = max(0, min(self.grid_size_3d - 1, gx))
             gy = max(0, min(self.grid_size_3d - 1, gy))
