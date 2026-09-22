@@ -77,12 +77,18 @@ The browser view is connected to the running simulation, so it shows the researc
   <tr>
     <td width="25%"><img src="assets/screenshots/sandbox-entry.png" alt="Simulation setup screen"></td>
     <td width="25%"><img src="assets/screenshots/command-center.png" alt="Live Swarm Command Center(Veil-Off)"></td>
-    <td width="25%"><img src="assets/screenshots/command-center(2).png" alt="Live Swarm Command Center(Veil-On)"></td>
-    <td width="25%"><img src="assets/screenshots/statistics.png" alt="Statistics Viewer"></td>
+    
   </tr>
   <tr>
     <td align="center"><sub>Choose the evaluation scale</sub></td>
     <td align="center"><sub>Observe exploration and adaptive formation behavior</sub></td>
+    
+  </tr>
+  <tr>
+    <td width="25%"><img src="assets/screenshots/command-center(2).png" alt="Live Swarm Command Center(Veil-On)"></td>
+    <td width="25%"><img src="assets/screenshots/statistics.png" alt="Statistics Viewer"></td>
+  </tr>
+  <tr>
     <td align="center"><sub>Observe exploration and adaptive formation behavior</sub></td>
     <td align="center"><sub>Evaluate Results</sub></td>
   </tr>
