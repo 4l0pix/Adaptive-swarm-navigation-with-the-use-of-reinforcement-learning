@@ -15,6 +15,7 @@ venv/
 node_modules/
 
 # Generated experiment artifacts
+pathfinding_experiments_*.csv
 simulation/pathfinding_experiments_*.csv
 simulation/aggregated_experiments_*.csv
 simulation/aggregated_experiments_*.json

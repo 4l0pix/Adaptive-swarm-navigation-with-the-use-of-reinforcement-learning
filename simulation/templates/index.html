@@ -4,24 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adaptive Swarm Navigation | Thesis Sandbox</title>
-    <link href="https://fonts.googleapis.com/css2?family=Iceland&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-dark: #1a1a1a;
-            --bg-darker: #0d0d0d;
-            --military-red: #8b0000;
-            --military-maroon: #4a0000;
-            --accent-red: #dc3545;
-            --glass-bg: rgba(30, 30, 30, 0.7);
-            --glass-border: rgba(139, 0, 0, 0.4);
-            --glass-highlight: rgba(255, 255, 255, 0.05);
-            --text-primary: #e0e0e0;
-            --text-secondary: #888;
-            --text-muted: #555;
-            --success: #00ff00;
-            --warning: #ffc107;
-            --danger: #dc3545;
+            --ink-0: #f0f0ec;
+            --ink-1: #d9d9d3;
+            --ink-2: #afafa8;
+            --ink-3: #85857f;
+            --ink-4: #666660;
+            --ink-5: #41413d;
+            --ink-6: #232321;
+            --ink-7: #0c0d0c;
+            --signal: rgb(142, 84, 222);
+            --signal-soft: rgba(142, 84, 222, 0.16);
+            --surface: rgba(15, 16, 15, 0.72);
+            --surface-hover: rgba(142, 84, 222, 0.045);
+            --line: rgba(223, 223, 214, 0.14);
+            --line-strong: rgba(223, 223, 214, 0.24);
+            --text-primary: var(--ink-1);
+            --text-secondary: var(--ink-2);
+            --text-muted: var(--ink-4);
+            --success: var(--signal);
+            --warning: #afafa8;
+            --danger: var(--signal);
+            --mono: 'IBM Plex Mono', monospace;
+            --heading: 'Inter Tight', sans-serif;
             /* Viewport-relative base units */
             --base-unit: min(1vw, 1vh);
             --spacing-xs: calc(var(--base-unit) * 0.4);
@@ -30,7 +38,7 @@
             --font-xs: clamp(8px, calc(var(--base-unit) * 1), 12px);
             --font-sm: clamp(10px, calc(var(--base-unit) * 1.2), 14px);
             --font-md: clamp(12px, calc(var(--base-unit) * 1.5), 18px);
-            --font-lg: clamp(14px, calc(var(--base-unit) * 2), 24px);
+            --font-lg: clamp(16px, calc(var(--base-unit) * 2), 24px);
         }
 
         * {
@@ -46,27 +54,31 @@
         }
 
         body {
-            font-family: 'Iceland', sans-serif;
-            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 50%, var(--military-maroon) 100%);
-            background-size: 200% 200%;
-            animation: breathe 8s ease-in-out infinite;
+            font-family: var(--mono);
+            background: var(--ink-7);
             color: var(--text-primary);
             font-size: var(--font-sm);
+            font-weight: 300;
+            letter-spacing: 0;
         }
 
-        @keyframes breathe {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 1px;
+            border: 1px solid var(--line-strong);
+            pointer-events: none;
+            z-index: 10000;
         }
 
         /* Glass Panel Styling */
         .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            border-radius: calc(var(--base-unit) * 1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            background: var(--surface);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--line);
+            border-radius: 0;
+            box-shadow: none;
         }
 
         /* Main Container - fills viewport exactly */
@@ -83,20 +95,20 @@
         /* Progress Bar */
         #progress-container {
             grid-column: 1 / -1;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: calc(var(--base-unit) * 0.3);
+            background: rgba(15, 16, 15, 0.72);
+            border-radius: 0;
             height: 100%;
             position: relative;
             overflow: hidden;
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--line);
         }
 
         #progress-bar {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #000000 0%, var(--military-red) 100%);
-            transition: width 0.3s ease;
-            border-radius: calc(var(--base-unit) * 0.3);
+            background: var(--signal);
+            transition: width 180ms ease;
+            border-radius: 0;
         }
 
         #progress-text {
@@ -104,11 +116,13 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-family: 'Iceland', sans-serif;
+            font-family: var(--mono);
             font-size: var(--font-md);
-            color: #ffffff;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            color: var(--ink-0);
+            text-shadow: none;
             white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
 
         /* Header */
@@ -121,13 +135,13 @@
         }
 
         #header h1 {
-            font-family: 'Iceland', sans-serif;
+            font-family: var(--heading);
             font-size: var(--font-lg);
-            color: #ffffff;
-            font-weight: 700;
+            color: var(--ink-0);
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.15vw;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            letter-spacing: -0.035em;
+            text-shadow: none;
         }
 
         .header-status {
@@ -135,6 +149,9 @@
             align-items: center;
             gap: var(--spacing-md);
             font-size: var(--font-xs);
+            color: var(--ink-2);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
 
         .status-indicator {
@@ -146,15 +163,15 @@
         .status-dot {
             width: calc(var(--base-unit) * 0.8);
             height: calc(var(--base-unit) * 0.8);
-            border-radius: 50%;
+            border-radius: 0;
             animation: pulse 2s infinite;
         }
 
         .status-dot.active { background: var(--success); }
         .status-dot.idle { background: var(--warning); }
         .status-dot.error { background: var(--danger); }
-        .status-dot.running-experiments { background: #00ffff; animation: pulse 0.5s infinite; }
-        .status-dot.complete { background: #00ff00; animation: none; }
+        .status-dot.running-experiments { background: var(--signal); animation: pulse 0.5s infinite; }
+        .status-dot.complete { background: var(--signal); animation: none; }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -186,7 +203,9 @@
             left: 0;
             right: 0;
             padding: var(--spacing-xs) var(--spacing-sm);
-            background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+            background: rgba(15, 16, 15, 0.62);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(9px);
             z-index: 10;
             display: flex;
             justify-content: space-between;
@@ -199,12 +218,12 @@
         }
 
         .panel-title {
-            font-family: 'Iceland', sans-serif;
+            font-family: var(--heading);
             font-size: var(--font-lg);
-            font-weight: 700;
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 0.1vw;
-            color: #ffffff;
+            letter-spacing: -0.025em;
+            color: var(--ink-0);
         }
 
         /* Statistics Panel */
@@ -223,9 +242,9 @@
         }
 
         .stat-box {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--glass-border);
-            border-radius: calc(var(--base-unit) * 0.4);
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 0;
             padding: var(--spacing-xs);
             text-align: center;
         }
@@ -235,16 +254,16 @@
         }
 
         .stat-value {
-            font-family: 'Orbitron', sans-serif;
+            font-family: var(--mono);
             font-size: var(--font-sm);
-            font-weight: 700;
-            color: var(--text-primary);
+            font-weight: 500;
+            color: var(--ink-0);
         }
 
         .stat-label {
             font-size: var(--font-xs);
             text-transform: uppercase;
-            letter-spacing: 0.03vw;
+            letter-spacing: 0.1em;
             color: var(--text-secondary);
             margin-top: 1px;
         }
@@ -253,21 +272,22 @@
         .swarm-mode {
             padding: var(--spacing-xs);
             text-align: center;
-            border-radius: calc(var(--base-unit) * 0.4);
-            transition: all 0.3s ease;
+            border-radius: 0;
+            transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
         }
 
         .swarm-mode.offensive { 
-            background: linear-gradient(135deg, rgba(0, 255, 0, 0.3) 0%, rgba(0, 255, 0, 0.1) 100%);
-            border: 1px solid rgba(0, 255, 0, 0.5);
+            background: var(--signal-soft);
+            border: 1px solid var(--signal);
         }
         .swarm-mode.neutral { 
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3) 0%, rgba(0, 255, 255, 0.1) 100%);
-            border: 1px solid rgba(0, 255, 255, 0.5);
+            background: var(--surface-hover);
+            border: 1px solid var(--line-strong);
         }
         .swarm-mode.defensive { 
-            background: linear-gradient(135deg, rgba(220, 53, 69, 0.3) 0%, rgba(220, 53, 69, 0.1) 100%);
-            border: 1px solid rgba(220, 53, 69, 0.5);
+            background: transparent;
+            border: 1px solid var(--line);
+            box-shadow: inset 3px 0 0 var(--signal);
         }
 
         .swarm-mode-label {
@@ -277,10 +297,11 @@
         }
 
         .swarm-mode-value {
-            font-family: 'Orbitron', sans-serif;
+            font-family: var(--mono);
             font-size: var(--font-sm);
-            font-weight: 700;
+            font-weight: 500;
             margin-top: 2px;
+            color: var(--signal);
         }
 
         /* HeatMap Panel (compact, in right column) */
@@ -295,8 +316,8 @@
             aspect-ratio: 1;
             position: relative;
             background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: calc(var(--base-unit) * 0.4);
+            border: 1px solid var(--line);
+            border-radius: 0;
             overflow: hidden;
             margin-top: var(--spacing-xs);
         }
@@ -352,48 +373,49 @@
 
         .btn {
             padding: var(--spacing-xs) var(--spacing-sm);
-            border: none;
-            border-radius: calc(var(--base-unit) * 0.3);
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
+            border: 1px solid var(--line);
+            border-radius: 0;
+            font-family: var(--mono);
+            font-weight: 500;
             font-size: var(--font-xs);
             text-transform: uppercase;
-            letter-spacing: 0.03vw;
+            letter-spacing: 0.1em;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--military-red) 0%, var(--military-maroon) 100%);
-            color: white;
-            border: 1px solid var(--military-red);
+            background: transparent;
+            color: var(--signal);
+            border-color: var(--signal);
         }
 
         .btn-primary:hover {
-            background: linear-gradient(135deg, var(--accent-red) 0%, var(--military-red) 100%);
-            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+            background: var(--signal-soft);
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
+            background: transparent;
             color: var(--text-primary);
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--line);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--surface-hover);
+            color: var(--signal);
+            border-color: var(--signal);
         }
 
         .btn-success {
-            background: linear-gradient(135deg, var(--success) 0%, #00cc00 100%);
-            color: white;
-            border: 1px solid var(--success);
+            background: var(--signal-soft);
+            color: var(--signal);
+            border: 1px solid var(--signal);
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, var(--danger) 0%, #bd2130 100%);
-            color: white;
-            border: 1px solid var(--danger);
+            background: transparent;
+            color: var(--ink-2);
+            border: 1px solid var(--line);
         }
 
         .btn:disabled {
@@ -422,22 +444,23 @@
         .env-table td {
             padding: var(--spacing-xs);
             text-align: center;
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--line);
         }
 
         .env-table th {
-            background: rgba(139, 0, 0, 0.3);
-            font-family: 'Orbitron', sans-serif;
+            background: var(--surface-hover);
+            font-family: var(--mono);
             text-transform: uppercase;
+            letter-spacing: 0.1em;
             font-size: calc(var(--font-xs) * 0.85);
         }
 
         .env-table td {
-            background: rgba(0, 0, 0, 0.3);
+            background: transparent;
         }
 
         .env-table tr:hover td {
-            background: rgba(139, 0, 0, 0.2);
+            background: var(--surface-hover);
         }
 
         /* Mini 3D Environment Cube */
@@ -448,17 +471,16 @@
             flex-direction: column;
             align-items: center;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border-radius: 4px;
+            transition: border-color 180ms ease, background 180ms ease;
+            border-radius: 0;
             padding: 4px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--glass-border);
+            background: transparent;
+            border: 1px solid var(--line);
         }
 
         .env-cube-container:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
-            border-color: var(--military-red);
+            background: var(--surface-hover);
+            border-color: var(--signal);
         }
 
         .env-cube-canvas {
@@ -471,7 +493,9 @@
             color: var(--text-secondary);
             text-align: center;
             margin-top: 2px;
-            font-family: 'Orbitron', sans-serif;
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         .env-cube-delete {
@@ -480,10 +504,10 @@
             right: 2px;
             width: 14px;
             height: 14px;
-            background: var(--danger);
+            background: var(--signal);
             border: none;
-            border-radius: 50%;
-            color: white;
+            border-radius: 0;
+            color: var(--ink-0);
             font-size: 10px;
             cursor: pointer;
             display: none;
@@ -517,11 +541,11 @@
         .path-input-row input {
             flex: 1;
             padding: var(--spacing-xs);
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--glass-border);
-            border-radius: 2px;
+            background: rgba(15, 16, 15, 0.72);
+            border: 1px solid var(--line);
+            border-radius: 0;
             color: var(--text-primary);
-            font-family: 'Rajdhani', sans-serif;
+            font-family: var(--mono);
             font-size: var(--font-xs);
         }
 
@@ -534,8 +558,9 @@
         .path-waypoints {
             max-height: 8vh;
             overflow-y: auto;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 2px;
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 0;
             padding: var(--spacing-xs);
             margin-top: var(--spacing-xs);
         }
@@ -546,7 +571,7 @@
             align-items: center;
             padding: 2px 0;
             font-size: var(--font-xs);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid var(--line);
         }
 
         .waypoint-item:last-child {
@@ -564,15 +589,16 @@
             gap: var(--spacing-xs);
             margin-top: var(--spacing-xs);
             padding: var(--spacing-xs);
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: calc(var(--base-unit) * 0.4);
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 0;
         }
 
         .nest-icon {
             width: calc(var(--base-unit) * 2);
             height: calc(var(--base-unit) * 2);
-            background: var(--military-red);
-            border-radius: 50%;
+            background: var(--signal);
+            border-radius: 0;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -580,7 +606,7 @@
         }
 
         .nest-coords {
-            font-family: 'Orbitron', sans-serif;
+            font-family: var(--mono);
             font-size: var(--font-xs);
         }
 
@@ -589,8 +615,9 @@
             display: none;
             margin-top: var(--spacing-xs);
             padding: var(--spacing-xs);
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: calc(var(--base-unit) * 0.4);
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 0;
         }
 
         .path-legend.visible {
@@ -608,7 +635,7 @@
         .legend-color {
             width: calc(var(--base-unit) * 0.8);
             height: calc(var(--base-unit) * 0.8);
-            border-radius: 1px;
+            border-radius: 0;
         }
 
         /* Scrollbar styling */
@@ -616,11 +643,11 @@
             width: calc(var(--base-unit) * 0.4);
         }
         ::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
+            background: rgba(15, 16, 15, 0.72);
         }
         ::-webkit-scrollbar-thumb {
-            background: var(--military-red);
-            border-radius: 2px;
+            background: var(--signal);
+            border-radius: 0;
         }
 
         /* Zoom Controls */
@@ -634,21 +661,22 @@
             height: calc(var(--base-unit) * 5);
             min-width: 40px;
             min-height: 40px;
-            border-radius: 6px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid var(--glass-border);
+            border-radius: 0;
+            background: rgba(15, 16, 15, 0.72);
+            border: 1px solid var(--line);
             color: var(--text-primary);
             font-size: calc(var(--font-md) * 1.3);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
         }
 
         .zoom-btn:hover {
-            background: var(--military-red);
-            border-color: var(--military-red);
+            background: var(--signal-soft);
+            border-color: var(--signal);
+            color: var(--signal);
         }
 
         /* Experiments Panel */
@@ -676,22 +704,23 @@
         .exp-results-table td {
             padding: var(--spacing-xs);
             text-align: center;
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--line);
         }
 
         .exp-results-table th {
-            background: rgba(139, 0, 0, 0.3);
-            font-family: 'Orbitron', sans-serif;
+            background: var(--surface-hover);
+            font-family: var(--mono);
             text-transform: uppercase;
+            letter-spacing: 0.1em;
             font-size: calc(var(--font-xs) * 0.9);
         }
 
         .exp-results-table td {
-            background: rgba(0, 0, 0, 0.3);
+            background: transparent;
         }
 
         .exp-results-table tr:hover td {
-            background: rgba(139, 0, 0, 0.2);
+            background: var(--surface-hover);
         }
 
         /* Modal Styles */
@@ -701,7 +730,8 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(12, 13, 12, 0.86);
+            backdrop-filter: blur(9px);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -722,7 +752,7 @@
             justify-content: space-between;
             align-items: center;
             padding: var(--spacing-md);
-            border-bottom: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--line);
         }
 
         .modal-header h2 {
@@ -732,20 +762,21 @@
 
         .modal-close {
             background: transparent;
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--line);
             color: var(--text-primary);
             width: 28px;
             height: 28px;
-            border-radius: 4px;
+            border-radius: 0;
             cursor: pointer;
-            font-family: 'Orbitron', sans-serif;
+            font-family: var(--mono);
             font-size: var(--font-sm);
-            transition: all 0.2s ease;
+            transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
         }
 
         .modal-close:hover {
-            background: var(--military-red);
-            border-color: var(--military-red);
+            background: var(--signal-soft);
+            border-color: var(--signal);
+            color: var(--signal);
         }
 
         .modal-body {
@@ -771,16 +802,17 @@
             font-size: var(--font-xs);
             color: var(--text-secondary);
             text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
 
         .control-group select,
         .control-group input[type="file"] {
             padding: var(--spacing-xs) var(--spacing-sm);
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--glass-border);
-            border-radius: 4px;
+            background: rgba(15, 16, 15, 0.72);
+            border: 1px solid var(--line);
+            border-radius: 0;
             color: var(--text-primary);
-            font-family: 'Rajdhani', sans-serif;
+            font-family: var(--mono);
             font-size: var(--font-sm);
         }
 
@@ -793,8 +825,9 @@
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: var(--spacing-sm);
             padding: var(--spacing-sm);
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: calc(var(--base-unit) * 0.4);
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 0;
         }
 
         .stat-row {
@@ -809,7 +842,7 @@
         }
 
         .stat-row span:last-child {
-            font-family: 'Orbitron', sans-serif;
+            font-family: var(--mono);
             color: var(--text-primary);
         }
 
@@ -839,12 +872,13 @@
         }
 
         .welcome-container h1 {
-            font-family: 'Iceland', sans-serif;
+            font-family: var(--heading);
             font-size: calc(var(--font-lg) * 1.5);
-            color: #ffffff;
+            color: var(--ink-0);
             margin-bottom: var(--spacing-sm);
             text-transform: uppercase;
-            letter-spacing: 3px;
+            letter-spacing: -0.045em;
+            line-height: 0.9;
         }
 
         .welcome-container p {
@@ -862,24 +896,26 @@
             color: var(--text-primary);
             margin-bottom: var(--spacing-xs);
             font-size: var(--font-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
 
         .welcome-input-group input {
             width: 150px;
             padding: var(--spacing-sm);
             font-size: var(--font-md);
-            font-family: 'Iceland', sans-serif;
+            font-family: var(--mono);
             text-align: center;
-            background: rgba(0, 0, 0, 0.5);
-            border: 2px solid var(--glass-border);
-            border-radius: calc(var(--base-unit) * 0.5);
+            background: rgba(15, 16, 15, 0.72);
+            border: 1px solid var(--line);
+            border-radius: 0;
             color: var(--text-primary);
             outline: none;
         }
 
         .welcome-input-group input:focus {
-            border-color: var(--military-red);
-            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+            border-color: var(--signal);
+            box-shadow: none;
         }
 
         .welcome-hint {
@@ -887,27 +923,27 @@
             color: var(--text-muted) !important;
             line-height: 1.4;
             margin-top: var(--spacing-md);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         #btn-start-session {
             padding: var(--spacing-sm) calc(var(--spacing-md) * 2);
             font-size: var(--font-md);
-            font-family: 'Iceland', sans-serif;
-            font-weight: 700;
+            font-family: var(--mono);
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            background: linear-gradient(135deg, var(--military-red) 0%, var(--military-maroon) 100%);
-            border: 2px solid var(--military-red);
-            border-radius: calc(var(--base-unit) * 0.5);
-            color: #ffffff;
+            letter-spacing: 0.12em;
+            background: transparent;
+            border: 1px solid var(--signal);
+            border-radius: 0;
+            color: var(--signal);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
         }
 
         #btn-start-session:hover {
-            background: linear-gradient(135deg, var(--accent-red) 0%, var(--military-red) 100%);
-            box-shadow: 0 0 20px rgba(139, 0, 0, 0.6);
-            transform: scale(1.02);
+            background: var(--signal-soft);
         }
     </style>
     <script type="importmap">
@@ -948,7 +984,7 @@
 
         <!-- Header -->
         <header id="header" class="glass-panel">
-            <h1>Swarm Command Center <span style="font-size: 0.45em; opacity: 0.7;">v0.5</span></h1>
+            <h1><span style="font-size: 0.45em; opacity: 0.7;"></span></h1>
             <div class="header-status">
                 <div class="status-indicator">
                     <span class="status-dot idle" id="sim-status-dot"></span>
@@ -965,7 +1001,7 @@
                 <div class="panel-header">
                     <span class="panel-title">3D Environment View</span>
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <button class="zoom-btn" id="btn-fog-toggle" title="Toggle The Veil" style="font-size: 1rem;">&#128065;</button>
+                        <button class="zoom-btn" id="btn-fog-toggle" title="Toggle The Veil" style="font-size: 0.7rem;">Toggle Veil</button>
                         <div class="zoom-controls">
                             <button class="zoom-btn" id="btn-zoom-in" title="Zoom In">+</button>
                             <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out">−</button>
@@ -993,10 +1029,10 @@
                         <canvas id="map-canvas"></canvas>
                     </div>
                     <div class="path-legend" id="path-legend">
-                        <div class="legend-item"><span class="legend-color" style="background: #8b0000;"></span>Dijkstra</div>
-                        <div class="legend-item"><span class="legend-color" style="background: #dc143c;"></span>A*</div>
-                        <div class="legend-item"><span class="legend-color" style="background: #ff4444;"></span>Safety First</div>
-                        <div class="legend-item"><span class="legend-color" style="background: #ff6b6b;"></span>Balanced</div>
+                        <div class="legend-item"><span class="legend-color" style="background: rgb(142, 84, 222);"></span>Dijkstra</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #afafa8;"></span>A*</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #666660;"></span>Safety First</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #f0f0ec;"></span>Balanced</div>
                     </div>
                 </section>
             </div>
@@ -1012,15 +1048,15 @@
 
                 <div class="stat-grid">
                     <div class="stat-box">
-                        <div class="stat-value" id="stat-offensive" style="color: #00ff00;">0</div>
+                        <div class="stat-value" id="stat-offensive" style="color: var(--signal);">0</div>
                         <div class="stat-label">Offensive</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="stat-neutral" style="color: #00ffff;">0</div>
+                        <div class="stat-value" id="stat-neutral" style="color: var(--ink-0);">0</div>
                         <div class="stat-label">Neutral</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="stat-defensive" style="color: #dc3545;">0</div>
+                        <div class="stat-value" id="stat-defensive" style="color: var(--ink-3);">0</div>
                         <div class="stat-label">Defensive</div>
                     </div>
                     <div class="stat-box">

@@ -6,6 +6,34 @@ const REFRESH_RATE = 0; // ms - no delay for maximum speed
 const STEPS_PER_FRAME = 3; // Run multiple simulation steps per render frame
 let pathsPerTest = 100; // Configurable pathfinding experiments per exploration test
 
+const THEME = {
+    ink0: '#f0f0ec',
+    ink1: '#d9d9d3',
+    ink2: '#afafa8',
+    ink3: '#85857f',
+    ink4: '#666660',
+    ink5: '#41413d',
+    ink6: '#232321',
+    ink7: '#0c0d0c',
+    signal: '#8e54de',
+    signalSoft: 'rgba(142, 84, 222, 0.16)',
+    line: 'rgba(223, 223, 214, 0.14)'
+};
+
+const PATH_COLORS = {
+    dijkstra: THEME.signal,
+    astar: THEME.ink2,
+    safety: THEME.ink4,
+    balanced: THEME.ink0
+};
+
+const PATH_COLORS_3D = {
+    dijkstra: 0x8e54de,
+    astar: 0xafafa8,
+    safety: 0x666660,
+    balanced: 0xf0f0ec
+};
+
 // State
 let isRunning = false;
 let autoRunMode = false; // Auto-run exploration until complete
@@ -160,7 +188,7 @@ async function startNextTestCycle() {
     
     // Clear 2D map
     if (mapCtx && mapCanvas) {
-        mapCtx.fillStyle = '#1a1a2e';
+        mapCtx.fillStyle = THEME.ink7;
         mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
     }
     
@@ -251,12 +279,12 @@ function init3D() {
     directionalLight.position.set(300, 300, 400);
     scene.add(directionalLight);
 
-    const redLight = new THREE.PointLight(0x8b0000, 0.5, 800);
+    const redLight = new THREE.PointLight(0x8e54de, 0.35, 800);
     redLight.position.set(250, 250, 600);
     scene.add(redLight);
 
     // Grid Helper
-    const gridHelper = new THREE.GridHelper(500, 25, 0x4a0000, 0x1a1a1a);
+    const gridHelper = new THREE.GridHelper(500, 25, 0x41413d, 0x232321);
     gridHelper.rotation.x = Math.PI / 2;
     gridHelper.position.set(250, 250, 0);
     scene.add(gridHelper);
@@ -264,7 +292,7 @@ function init3D() {
     // Environment Boundary Box
     const boundaryGeometry = new THREE.BoxGeometry(500, 500, 500);
     const boundaryEdges = new THREE.EdgesGeometry(boundaryGeometry);
-    const boundaryMaterial = new THREE.LineBasicMaterial({ color: 0x8b0000, opacity: 0.5, transparent: true });
+    const boundaryMaterial = new THREE.LineBasicMaterial({ color: 0x8e54de, opacity: 0.42, transparent: true });
     const boundaryLine = new THREE.LineSegments(boundaryEdges, boundaryMaterial);
     boundaryLine.position.set(250, 250, 250);
     scene.add(boundaryLine);
@@ -429,7 +457,7 @@ function updateModalVisualization(type) {
     }
     
     const labels = ['Dijkstra', 'A*', 'Safety First', 'Balanced'];
-    const colors = ['#8b0000', '#dc143c', '#ff4444', '#ff6b6b'];
+    const colors = [PATH_COLORS.dijkstra, PATH_COLORS.astar, PATH_COLORS.safety, PATH_COLORS.balanced];
     
     let chartConfig;
     
@@ -511,10 +539,10 @@ function updateModalVisualization(type) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#888' } } },
+                plugins: { legend: { labels: { color: THEME.ink2 } } },
                 scales: {
-                    x: { title: { display: true, text: 'Path Length', color: '#888' }, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                    y: { title: { display: true, text: 'Path Cost', color: '#888' }, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    x: { title: { display: true, text: 'Path Length', color: THEME.ink2 }, ticks: { color: THEME.ink2 }, grid: { color: THEME.line } },
+                    y: { title: { display: true, text: 'Path Cost', color: THEME.ink2 }, ticks: { color: THEME.ink2 }, grid: { color: THEME.line } }
                 }
             }
         };
@@ -534,7 +562,7 @@ function updateModalVisualization(type) {
                 renderHPChart(currentExperimentRaw.hp_rl_results);
             } catch (err) {
                 console.error('Error rendering HP chart from payload:', err);
-                chartArea.innerHTML = '<div style="color:#f88;padding:1rem;">HP-RL results unavailable (render error)</div>';
+                chartArea.innerHTML = `<div style="color:${THEME.signal};padding:1rem;">HP-RL results unavailable (render error)</div>`;
             }
             return;
         }
@@ -554,7 +582,7 @@ function updateModalVisualization(type) {
             })
             .catch(err => {
                 console.warn('HP-RL fetch error', err);
-                chartArea.innerHTML = '<div style="color:#f88;padding:1rem;">HP-RL results unavailable</div>';
+                chartArea.innerHTML = `<div style="color:${THEME.signal};padding:1rem;">HP-RL results unavailable</div>`;
             });
         return;
     }
@@ -568,8 +596,8 @@ function getChartOptions(yLabel) {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-            x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-            y: { title: { display: true, text: yLabel, color: '#888' }, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+            x: { ticks: { color: THEME.ink2 }, grid: { color: THEME.line } },
+            y: { title: { display: true, text: yLabel, color: THEME.ink2 }, ticks: { color: THEME.ink2 }, grid: { color: THEME.line } }
         }
     };
 }
@@ -586,28 +614,28 @@ function renderResultsTable() {
                 <tr><th>Algorithm</th><th>Avg Length</th><th>Avg Cost</th><th>Success Rate</th><th>Successes</th></tr>
             </thead>
             <tbody>
-                <tr style="border-left: 3px solid #00ff00;">
+                <tr style="border-left: 3px solid ${PATH_COLORS.dijkstra};">
                     <td>Dijkstra</td>
                     <td>${(summary.dijkstra?.avg_length || 0).toFixed(1)}</td>
                     <td>${(summary.dijkstra?.avg_cost || 0).toFixed(2)}</td>
                     <td>${(((summary.dijkstra?.successes || 0) / total) * 100).toFixed(1)}%</td>
                     <td>${summary.dijkstra?.successes || 0}/${total}</td>
                 </tr>
-                <tr style="border-left: 3px solid #ff00ff;">
+                <tr style="border-left: 3px solid ${PATH_COLORS.astar};">
                     <td>A*</td>
                     <td>${(summary.astar?.avg_length || 0).toFixed(1)}</td>
                     <td>${(summary.astar?.avg_cost || 0).toFixed(2)}</td>
                     <td>${(((summary.astar?.successes || 0) / total) * 100).toFixed(1)}%</td>
                     <td>${summary.astar?.successes || 0}/${total}</td>
                 </tr>
-                <tr style="border-left: 3px solid #00bfff;">
+                <tr style="border-left: 3px solid ${PATH_COLORS.safety};">
                     <td>Safety First</td>
                     <td>${(summary.safety_first?.avg_length || 0).toFixed(1)}</td>
                     <td>${(summary.safety_first?.avg_cost || 0).toFixed(2)}</td>
                     <td>${(((summary.safety_first?.successes || 0) / total) * 100).toFixed(1)}%</td>
                     <td>${summary.safety_first?.successes || 0}/${total}</td>
                 </tr>
-                <tr style="border-left: 3px solid #ffa500;">
+                <tr style="border-left: 3px solid ${PATH_COLORS.balanced};">
                     <td>Balanced</td>
                     <td>${(summary.balanced?.avg_length || 0).toFixed(1)}</td>
                     <td>${(summary.balanced?.avg_cost || 0).toFixed(2)}</td>
@@ -713,18 +741,18 @@ function renderHPChart(data) {
         data: {
             labels: profilesOrder,
             datasets: [
-                { label: 'Cohesion (w_c)', data: cohesionVals, backgroundColor: '#8b0000' },
-                { label: 'Alignment (w_a)', data: alignmentVals, backgroundColor: '#dc143c' },
-                { label: 'Separation (w_s)', data: separationVals, backgroundColor: '#ff4444' }
+                { label: 'Cohesion (w_c)', data: cohesionVals, backgroundColor: THEME.signal },
+                { label: 'Alignment (w_a)', data: alignmentVals, backgroundColor: THEME.ink2 },
+                { label: 'Separation (w_s)', data: separationVals, backgroundColor: THEME.ink4 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { color: '#ccc' } } },
+            plugins: { legend: { position: 'top', labels: { color: THEME.ink1 } } },
             scales: {
-                x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.03)' } },
-                y: { title: { display: true, text: 'Weight / Multiplier', color: '#888' }, ticks: { color: '#888' }, beginAtZero: true }
+                x: { ticks: { color: THEME.ink2 }, grid: { color: THEME.line } },
+                y: { title: { display: true, text: 'Weight / Multiplier', color: THEME.ink2 }, ticks: { color: THEME.ink2 }, beginAtZero: true }
             }
         }
     });
@@ -997,9 +1025,9 @@ function createNestMesh() {
     // Create nest indicator in 3D - smaller size
     const geometry = new THREE.ConeGeometry(6, 12, 6);
     const material = new THREE.MeshPhongMaterial({ 
-        color: 0x8b0000, 
-        emissive: 0x4a0000,
-        shininess: 100 
+        color: 0x8e54de,
+        emissive: 0x232321,
+        shininess: 24
     });
     nestMesh = new THREE.Mesh(geometry, material);
     nestMesh.position.set(nestPosition.x, nestPosition.y, nestPosition.z);
@@ -1476,7 +1504,7 @@ function updateStopButtonState() {
 function updateAgents3D(agentsData) {
     while (agentsMesh.length < agentsData.length) {
         const geometry = new THREE.SphereGeometry(4, 16, 16);
-        const material = new THREE.MeshPhongMaterial({ color: 0x00ffff });
+        const material = new THREE.MeshPhongMaterial({ color: 0xf0f0ec });
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
         agentsMesh.push(mesh);
@@ -1491,9 +1519,9 @@ function updateAgents3D(agentsData) {
         const mesh = agentsMesh[i];
         mesh.position.set(agent.x, agent.y, agent.z);
 
-        let color = 0x00ffff; // Neutral Cyan
-        if (agent.profile === 'Offensive') color = 0x00ff00; // Lime
-        if (agent.profile === 'Defensive') color = 0xdc3545; // Red
+        let color = 0xf0f0ec;
+        if (agent.profile === 'Offensive') color = 0x8e54de;
+        if (agent.profile === 'Defensive') color = 0x85857f;
 
         mesh.material.color.setHex(color);
     });
@@ -1504,10 +1532,10 @@ function updateObstacles3D(obstaclesData) {
         obstaclesData.forEach(obs => {
             const geometry = new THREE.BoxGeometry(obs.w, obs.w, obs.h);
             const material = new THREE.MeshPhongMaterial({
-                color: 0x800000,
+                color: 0x8e54de,
                 transparent: true,
-                opacity: 0.7,
-                emissive: 0x400000
+                opacity: 0.62,
+                emissive: 0x232321
             });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(obs.x, obs.y, obs.z + obs.h / 2);
@@ -1537,19 +1565,19 @@ function updateMap2D(exploredGrid, threatMap, agents, obstacles) {
                 let r = 0, g = 0, b = 0;
 
                 if (threat < 0.25) {
-                    // Low threat: Red (was blue)
+                    // Low threat: light ink wash
                     const t = threat * 4;
-                    r = 255; g = (1 - t) * 80; b = (1 - t) * 80;
+                    r = 65 + t * 20; g = 65 + t * 20; b = 61 + t * 20;
                 } else if (threat < 0.5) {
-                    // Medium-low threat: Darker red (was yellow/orange)
+                    // Medium-low threat: muted graphite
                     const t = (threat - 0.25) * 4;
-                    r = 255 - t * 60; g = 0; b = 0;
+                    r = 95 + t * 48; g = 84 + t * 22; b = 122 + t * 60;
                 } else if (threat < 1.0) {
-                    // Medium-high threat: Even darker red (was orange/red)
+                    // Medium-high threat: restrained signal tint
                     const t = (threat - 0.5) * 2;
-                    r = 195 - t * 60; g = 0; b = 0;
+                    r = 142 - t * 42; g = 84 - t * 30; b = 222 - t * 68;
                 } else {
-                    // Very high threat: Dark grey to Black (was purple)
+                    // Very high threat: dark ink
                     const t = Math.min(threat - 1.0, 1.0);
                     const gray = 80 * (1 - t);
                     r = gray; g = gray; b = gray;
@@ -1561,24 +1589,15 @@ function updateMap2D(exploredGrid, threatMap, agents, obstacles) {
         }
     }
 
-    // Draw obstacles with glowing borders
+    // Draw obstacles with sharp hairline borders
     obstacles.forEach(obs => {
         const cx = (obs.x / envDimensions.width) * width;
         const cy = height - (obs.y / envDimensions.height) * height;
         const cw = (obs.w / envDimensions.width) * width * 2;
         
-        // Outer glow layers
         mapCtx.save();
-        mapCtx.shadowColor = '#ff4444';
-        mapCtx.shadowBlur = 15;
-        mapCtx.strokeStyle = '#ff2222';
-        mapCtx.lineWidth = 2;
-        mapCtx.strokeRect(cx - cw / 2, cy - cw / 2, cw, cw);
-        
-        // Inner bright border
-        mapCtx.shadowBlur = 8;
-        mapCtx.shadowColor = '#ff6666';
-        mapCtx.strokeStyle = '#ff4444';
+        mapCtx.shadowBlur = 0;
+        mapCtx.strokeStyle = THEME.signal;
         mapCtx.lineWidth = 1;
         mapCtx.strokeRect(cx - cw / 2, cy - cw / 2, cw, cw);
         mapCtx.restore();
@@ -1589,9 +1608,9 @@ function updateMap2D(exploredGrid, threatMap, agents, obstacles) {
         const cx = (agent.x / envDimensions.width) * width;
         const cy = height - (agent.y / envDimensions.height) * height;
 
-        let color = '#00ffff';
-        if (agent.profile === 'Offensive') color = '#00ff00';
-        if (agent.profile === 'Defensive') color = '#dc3545';
+        let color = THEME.ink0;
+        if (agent.profile === 'Offensive') color = THEME.signal;
+        if (agent.profile === 'Defensive') color = THEME.ink3;
 
         mapCtx.fillStyle = color;
         mapCtx.beginPath();
@@ -1602,11 +1621,11 @@ function updateMap2D(exploredGrid, threatMap, agents, obstacles) {
     // Draw nest - smaller size
     const nx = (nestPosition.x / envDimensions.width) * width;
     const ny = height - (nestPosition.y / envDimensions.height) * height;
-    mapCtx.fillStyle = '#8b0000';
+    mapCtx.fillStyle = THEME.signal;
     mapCtx.beginPath();
     mapCtx.arc(nx, ny, Math.max(2, width * 0.015), 0, Math.PI * 2);
     mapCtx.fill();
-    mapCtx.strokeStyle = '#ffffff';
+    mapCtx.strokeStyle = THEME.ink0;
     mapCtx.lineWidth = 1;
     mapCtx.stroke();
 
@@ -1702,10 +1721,10 @@ async function findPath() {
         balancedPath = data.balanced.path;
 
         // Draw paths in 3D
-        drawPath3D(dijkstraPath, 0x00ff00, 'dijkstra');
-        drawPath3D(astarPath, 0xff00ff, 'astar');
-        drawPath3D(safetyPath, 0x00ffff, 'safety');
-        drawPath3D(balancedPath, 0xffa500, 'balanced');
+        drawPath3D(dijkstraPath, PATH_COLORS_3D.dijkstra, 'dijkstra');
+        drawPath3D(astarPath, PATH_COLORS_3D.astar, 'astar');
+        drawPath3D(safetyPath, PATH_COLORS_3D.safety, 'safety');
+        drawPath3D(balancedPath, PATH_COLORS_3D.balanced, 'balanced');
 
         pathLegend.classList.add('visible');
         redrawMap();
@@ -1738,21 +1757,21 @@ function drawPathfindingOverlay() {
         mapCtx.stroke();
     };
 
-    drawPath2D(dijkstraPath, '#00ff00');
-    drawPath2D(astarPath, '#ff00ff');
-    drawPath2D(safetyPath, '#00ffff');
-    drawPath2D(balancedPath, '#ffa500');
+    drawPath2D(dijkstraPath, PATH_COLORS.dijkstra);
+    drawPath2D(astarPath, PATH_COLORS.astar);
+    drawPath2D(safetyPath, PATH_COLORS.safety);
+    drawPath2D(balancedPath, PATH_COLORS.balanced);
 
     // Draw start/goal points
     if (startPoint) {
         const sx = (startPoint.x / envDimensions.width) * width;
         const sy = height - (startPoint.y / envDimensions.height) * height;
-        mapCtx.fillStyle = '#00ff00';
+        mapCtx.fillStyle = THEME.signal;
         mapCtx.beginPath();
         mapCtx.arc(sx, sy, 6, 0, Math.PI * 2);
         mapCtx.fill();
-        mapCtx.fillStyle = 'white';
-        mapCtx.font = '10px Orbitron';
+        mapCtx.fillStyle = THEME.ink0;
+        mapCtx.font = '10px IBM Plex Mono';
         mapCtx.textAlign = 'center';
         mapCtx.fillText('S', sx, sy - 10);
     }
@@ -1760,12 +1779,12 @@ function drawPathfindingOverlay() {
     if (goalPoint) {
         const gx = (goalPoint.x / envDimensions.width) * width;
         const gy = height - (goalPoint.y / envDimensions.height) * height;
-        mapCtx.fillStyle = '#dc3545';
+        mapCtx.fillStyle = THEME.ink3;
         mapCtx.beginPath();
         mapCtx.arc(gx, gy, 6, 0, Math.PI * 2);
         mapCtx.fill();
-        mapCtx.fillStyle = 'white';
-        mapCtx.font = '10px Orbitron';
+        mapCtx.fillStyle = THEME.ink0;
+        mapCtx.font = '10px IBM Plex Mono';
         mapCtx.textAlign = 'center';
         mapCtx.fillText('G', gx, gy - 10);
     }
