@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adaptive Swarm Navigation | Thesis Sandbox</title>
+    <link rel="stylesheet" href="/swarm-nav/assets/environment-view.css">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -650,35 +651,6 @@
             border-radius: 0;
         }
 
-        /* Zoom Controls */
-        .zoom-controls {
-            display: flex;
-            gap: 2px;
-        }
-
-        .zoom-btn {
-            width: calc(var(--base-unit) * 5);
-            height: calc(var(--base-unit) * 5);
-            min-width: 40px;
-            min-height: 40px;
-            border-radius: 0;
-            background: rgba(15, 16, 15, 0.72);
-            border: 1px solid var(--line);
-            color: var(--text-primary);
-            font-size: calc(var(--font-md) * 1.3);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
-        }
-
-        .zoom-btn:hover {
-            background: var(--signal-soft);
-            border-color: var(--signal);
-            color: var(--signal);
-        }
-
         /* Experiments Panel */
         #experiments-panel {
             padding: var(--spacing-sm);
@@ -1001,12 +973,6 @@
                 <div class="panel-header">
                     <span class="panel-title">3D Environment View</span>
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <button class="zoom-btn" id="btn-fog-toggle" title="Toggle The Veil" style="font-size: 0.7rem;">Toggle Veil</button>
-                        <div class="zoom-controls">
-                            <button class="zoom-btn" id="btn-zoom-in" title="Zoom In">+</button>
-                            <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out">−</button>
-                            <button class="zoom-btn" id="btn-zoom-reset" title="Reset View">⌂</button>
-                        </div>
                         <span id="agent-count-badge">15 Agents</span>
                     </div>
                 </div>

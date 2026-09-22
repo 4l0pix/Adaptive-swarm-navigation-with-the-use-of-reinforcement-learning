@@ -4,9 +4,11 @@
   "version": "0.5.0",
   "description": "Browser capture tooling for the Adaptive Swarm Navigation thesis sandbox",
   "scripts": {
-    "screenshots": "playwright install chromium && node scripts/capture_screenshots.mjs"
+    "screenshots": "playwright install chromium && node scripts/capture_screenshots.mjs",
+    "test:environment-view": "node tests/browser/environment-view.spec.mjs"
   },
   "devDependencies": {
-    "playwright": "^1.61.1"
+    "playwright": "^1.61.1",
+    "three": "0.160.0"
   }
 }

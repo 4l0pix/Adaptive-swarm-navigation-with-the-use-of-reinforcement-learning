@@ -27,9 +27,9 @@ planner implementations through the `simulation` package. It does not import
 API can be used without Flask installed. No REST run registry or server migration
 is required to run a research script.
 
-## Browser sandbox (v0.5)
+## Browser sandbox (v0.5 UI, v0.7 viewer API)
 
-I kept version 0.5 fairly small. Python holds the world state and performs the swarm, learning, and pathfinding calculations. The browser turns that state into the live command-center view and starts the experiment cycles.
+I kept version 0.5 fairly small. Python holds the world state and performs the swarm, learning, and pathfinding calculations. The browser turns that state into the live command-center view and starts the experiment cycles. Its Three.js environment is supplied by the versioned `swarm_nav.web.EnvironmentView` assets, which are also the supported integration point for downstream Flask dashboards.
 
 ```mermaid
 flowchart LR

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7 - Versioned environment viewer API (2026-09-22)
+
+- Added the packaged `swarm_nav.web` browser API with a Flask asset blueprint.
+- Added a validated `EnvironmentView` contract for world, nest, agent, and obstacle state.
+- Moved Three.js lifecycle, mesh reconciliation, exploration veil, resize handling, and controls into the shared component.
+- Refactored the thesis dashboard to consume `EnvironmentView` as its single renderer source of truth.
+- Added wheel, blueprint, source-of-truth, and Chromium lifecycle regression tests.
+- Documented the shared frontend API and included its JavaScript and CSS in built wheels.
+
 ## 0.6 - Python research API (2026-09-15)
 
 - Added the installable `swarm_nav` library with environment, obstacle, swarm, and simulation builders.

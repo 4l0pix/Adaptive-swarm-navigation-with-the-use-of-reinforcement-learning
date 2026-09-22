@@ -1,5 +1,4 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EnvironmentView } from '/swarm-nav/assets/environment-view.js';
 
 // Configuration
 const REFRESH_RATE = 0; // ms - no delay for maximum speed
@@ -27,13 +26,6 @@ const PATH_COLORS = {
     balanced: THEME.ink0
 };
 
-const PATH_COLORS_3D = {
-    dijkstra: 0x8e54de,
-    astar: 0xafafa8,
-    safety: 0x666660,
-    balanced: 0xf0f0ec
-};
-
 // State
 let isRunning = false;
 let autoRunMode = false; // Auto-run exploration until complete
@@ -43,12 +35,7 @@ let experimentsTriggered = false; // Prevent double-triggering within a test
 let experimentsCompleted = 0; // Track completed experiments
 let experimentProgressInterval = null; // Polling interval for experiment progress
 let allTestResults = []; // Aggregate results across all tests
-let scene, camera, renderer, controls;
-let agentsMesh = [];
-let obstaclesMesh = [];
-
-let pathLines3D = { dijkstra: null, astar: null, safety: null, balanced: null, manual: null };
-let nestMesh = null;
+let environmentView = null;
 let mapCanvas, mapCtx;
 let envDimensions = { width: 500, height: 500, depth: 500, resolution: 50 };
 let nestPosition = { x: 0, y: 0, z: 250 };
@@ -56,14 +43,6 @@ let simulationStartTime = null;
 let current2DExploration = 0; // Track 2D exploration percentage
 
 // Exploration tracking (sector grid removed)
-
-// 3D exploration visualization - fog of war style
-let explorationGrid3D = null; // Grid of cells for exploration lighting
-let explorationGridData = null; // Data tracking which cells are explored
-let fogOfWarEnabled = true; // Toggle for fog visibility
-const EXPLORATION_GRID_SIZE = 25; // 25x25x25 grid = 20 units per cell in 500x500x500 env
-const AGENT_VISUAL_RANGE = 30; // Visual range radius for each agent
-// Sector exploration threshold removed
 
 // Experiment results storage
 let currentExperimentData = null;
@@ -105,12 +84,6 @@ const agentCountBadge = document.getElementById('agent-count-badge');
 
 // Path Legend
 const pathLegend = document.getElementById('path-legend');
-
-// Zoom Controls
-const btnZoomIn = document.getElementById('btn-zoom-in');
-const btnZoomOut = document.getElementById('btn-zoom-out');
-const btnZoomReset = document.getElementById('btn-zoom-reset');
-const btnFogToggle = document.getElementById('btn-fog-toggle');
 
 // Progress Bar Elements
 const progressBar = document.getElementById('progress-bar');
@@ -176,15 +149,7 @@ async function startNextTestCycle() {
     // Always reset simulation for fresh random obstacles
     await fetch('/init', { method: 'POST' });
     await initializeNestPosition();
-    
-    // Clear 3D exploration grid
-    clearExplorationGrid3D();
-    
-    // Clear 3D scene objects
-    agentsMesh.forEach(mesh => scene.remove(mesh));
-    agentsMesh = [];
-    obstaclesMesh.forEach(mesh => scene.remove(mesh));
-    obstaclesMesh = [];
+    mountEnvironmentView();
     
     // Clear 2D map
     if (mapCtx && mapCanvas) {
@@ -201,40 +166,8 @@ async function startNextTestCycle() {
     loop();
 }
 
-// Clear the 3D exploration grid for a fresh test
-function clearExplorationGrid3D() {
-    if (explorationGridData) {
-        for (let x = 0; x < EXPLORATION_GRID_SIZE; x++) {
-            for (let y = 0; y < EXPLORATION_GRID_SIZE; y++) {
-                for (let z = 0; z < EXPLORATION_GRID_SIZE; z++) {
-                    explorationGridData[x][y][z] = 0;
-                }
-            }
-        }
-    }
-    // Reset fog of war visibility - restore all cells to visible
-    if (explorationInstancedMesh && explorationCellSize > 0) {
-        let index = 0;
-        for (let x = 0; x < EXPLORATION_GRID_SIZE; x++) {
-            for (let y = 0; y < EXPLORATION_GRID_SIZE; y++) {
-                for (let z = 0; z < EXPLORATION_GRID_SIZE; z++) {
-                    tempMatrix.makeTranslation(
-                        x * explorationCellSize + explorationCellSize / 2,
-                        y * explorationCellSize + explorationCellSize / 2,
-                        z * explorationCellSize + explorationCellSize / 2
-                    );
-                    explorationInstancedMesh.setMatrixAt(index, tempMatrix);
-                    index++;
-                }
-            }
-        }
-        explorationInstancedMesh.instanceMatrix.needsUpdate = true;
-    }
-}
-
 // Initialize
 async function init() {
-    init3D();
     init2D();
     setupEventListeners();
     setupModalEventListeners();
@@ -244,81 +177,25 @@ async function init() {
 // Start welcome screen
 initWelcomeScreen();
 
-function init3D() {
-    const container = document.getElementById('view-3d');
-
-    // Scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0d0d0d);
-
-    // Camera
-    camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 2000);
-    camera.position.set(600, -200, 500);
-    camera.up.set(0, 0, 1);
-
-    // Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
-
-    // Controls
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 100;
-    controls.maxDistance = 1500;
-    controls.target.set(250, 250, 250);
-    controls.update();
-
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(300, 300, 400);
-    scene.add(directionalLight);
-
-    const redLight = new THREE.PointLight(0x8e54de, 0.35, 800);
-    redLight.position.set(250, 250, 600);
-    scene.add(redLight);
-
-    // Grid Helper
-    const gridHelper = new THREE.GridHelper(500, 25, 0x41413d, 0x232321);
-    gridHelper.rotation.x = Math.PI / 2;
-    gridHelper.position.set(250, 250, 0);
-    scene.add(gridHelper);
-
-    // Environment Boundary Box
-    const boundaryGeometry = new THREE.BoxGeometry(500, 500, 500);
-    const boundaryEdges = new THREE.EdgesGeometry(boundaryGeometry);
-    const boundaryMaterial = new THREE.LineBasicMaterial({ color: 0x8e54de, opacity: 0.42, transparent: true });
-    const boundaryLine = new THREE.LineSegments(boundaryEdges, boundaryMaterial);
-    boundaryLine.position.set(250, 250, 250);
-    scene.add(boundaryLine);
-
-    // Axes Helper
-    const axesHelper = new THREE.AxesHelper(50);
-    scene.add(axesHelper);
-
-    // Initialize exploration fog-of-war grid
-    initExplorationGrid();
-
-    // Animation Loop
-    function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-    }
-    animate();
-
-    // Resize handler
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    });
+function navigationWorld(snapshot = {}) {
+    const dimensions = snapshot.dimensions || envDimensions;
+    return {
+        size: dimensions.width,
+        nest: { ...nestPosition },
+        agents: snapshot.agents || [],
+        obstacles: snapshot.obstacles || []
+    };
 }
+
+function mountEnvironmentView() {
+    environmentView?.dispose();
+    environmentView = new EnvironmentView(
+        document.getElementById('view-3d'),
+        navigationWorld()
+    );
+}
+
+window.addEventListener('pagehide', () => environmentView?.dispose(), { once: true });
 
 function init2D() {
     mapCanvas = document.getElementById('map-canvas');
@@ -1012,156 +889,7 @@ async function initializeNestPosition() {
         // Fallback
         nestPosition = { x: 10, y: 250, z: 250 };
     }
-    
-    updateNestDisplay();
-    createNestMesh();
 }
-
-function createNestMesh() {
-    if (nestMesh) {
-        scene.remove(nestMesh);
-    }
-    
-    // Create nest indicator in 3D - smaller size
-    const geometry = new THREE.ConeGeometry(6, 12, 6);
-    const material = new THREE.MeshPhongMaterial({ 
-        color: 0x8e54de,
-        emissive: 0x232321,
-        shininess: 24
-    });
-    nestMesh = new THREE.Mesh(geometry, material);
-    nestMesh.position.set(nestPosition.x, nestPosition.y, nestPosition.z);
-    nestMesh.rotation.x = Math.PI; // Point down
-    scene.add(nestMesh);
-}
-
-function updateNestDisplay() {
-    // Nest coord display was removed from UI - function kept for compatibility
-}
-
-// Fog-of-war exploration visualization - black cells hide unexplored areas
-let explorationInstancedMesh = null;
-const tempMatrix = new THREE.Matrix4();
-const zeroScale = new THREE.Matrix4().makeScale(0, 0, 0);
-let explorationCellSize = 0;
-
-function initExplorationGrid() {
-    // Create a 3D grid tracking exploration state
-    explorationGridData = new Array(EXPLORATION_GRID_SIZE).fill(null).map(() =>
-        new Array(EXPLORATION_GRID_SIZE).fill(null).map(() =>
-            new Array(EXPLORATION_GRID_SIZE).fill(0) // 0 = unexplored, 1 = explored
-        )
-    );
-    
-    explorationCellSize = 500 / EXPLORATION_GRID_SIZE;
-    const totalCells = EXPLORATION_GRID_SIZE * EXPLORATION_GRID_SIZE * EXPLORATION_GRID_SIZE;
-    
-    // Use InstancedMesh - black opaque cells that hide unexplored areas
-    const cellGeometry = new THREE.BoxGeometry(explorationCellSize, explorationCellSize, explorationCellSize);
-    const cellMaterial = new THREE.MeshBasicMaterial({
-        color: 0x000000,
-        transparent: false,
-        depthWrite: true
-    });
-    
-    explorationInstancedMesh = new THREE.InstancedMesh(cellGeometry, cellMaterial, totalCells);
-    explorationInstancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    
-    // Set up positions for all instances (full coverage, no gaps)
-    let index = 0;
-    for (let x = 0; x < EXPLORATION_GRID_SIZE; x++) {
-        for (let y = 0; y < EXPLORATION_GRID_SIZE; y++) {
-            for (let z = 0; z < EXPLORATION_GRID_SIZE; z++) {
-                tempMatrix.makeTranslation(
-                    x * explorationCellSize + explorationCellSize / 2,
-                    y * explorationCellSize + explorationCellSize / 2,
-                    z * explorationCellSize + explorationCellSize / 2
-                );
-                explorationInstancedMesh.setMatrixAt(index, tempMatrix);
-                index++;
-            }
-        }
-    }
-    
-    explorationInstancedMesh.instanceMatrix.needsUpdate = true;
-    scene.add(explorationInstancedMesh);
-    explorationGrid3D = explorationInstancedMesh; // Keep reference for reset
-}
-
-function updateExplorationFromAgents(agentsData) {
-    if (!explorationInstancedMesh || !explorationGridData) return;
-    
-    const cellSize = explorationCellSize;
-    const visualRangeCells = Math.ceil(AGENT_VISUAL_RANGE / cellSize);
-    let needsMatrixUpdate = false;
-    
-    // For each agent, mark nearby cells as explored (remove black cover)
-    agentsData.forEach(agent => {
-        const gridX = Math.floor(agent.x / cellSize);
-        const gridY = Math.floor(agent.y / cellSize);
-        const gridZ = Math.floor(agent.z / cellSize);
-        
-        // Check cells within visual range
-        for (let dx = -visualRangeCells; dx <= visualRangeCells; dx++) {
-            for (let dy = -visualRangeCells; dy <= visualRangeCells; dy++) {
-                for (let dz = -visualRangeCells; dz <= visualRangeCells; dz++) {
-                    const cx = gridX + dx;
-                    const cy = gridY + dy;
-                    const cz = gridZ + dz;
-                    
-                    // Check bounds
-                    if (cx < 0 || cx >= EXPLORATION_GRID_SIZE ||
-                        cy < 0 || cy >= EXPLORATION_GRID_SIZE ||
-                        cz < 0 || cz >= EXPLORATION_GRID_SIZE) continue;
-                    
-                    // Check if within visual range (spherical)
-                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) * cellSize;
-                    if (dist <= AGENT_VISUAL_RANGE) {
-                        // Mark as explored - remove the black cell
-                        if (explorationGridData[cx][cy][cz] === 0) {
-                            explorationGridData[cx][cy][cz] = 1;
-                            
-                            // Scale cell to 0 to hide it
-                            const cellIndex = cx * EXPLORATION_GRID_SIZE * EXPLORATION_GRID_SIZE + 
-                                             cy * EXPLORATION_GRID_SIZE + cz;
-                            explorationInstancedMesh.setMatrixAt(cellIndex, zeroScale);
-                            needsMatrixUpdate = true;
-                        }
-                    }
-                }
-            }
-        }
-    });
-    
-    // Only update GPU buffer if matrices changed
-    if (needsMatrixUpdate) {
-        explorationInstancedMesh.instanceMatrix.needsUpdate = true;
-    }
-}
-
-function resetExplorationGrid() {
-    if (!explorationInstancedMesh || !explorationGridData) return;
-    
-    // Reset all cells to unexplored - restore black cover
-    let index = 0;
-    for (let x = 0; x < EXPLORATION_GRID_SIZE; x++) {
-        for (let y = 0; y < EXPLORATION_GRID_SIZE; y++) {
-            for (let z = 0; z < EXPLORATION_GRID_SIZE; z++) {
-                explorationGridData[x][y][z] = 0;
-                tempMatrix.makeTranslation(
-                    x * explorationCellSize + explorationCellSize / 2,
-                    y * explorationCellSize + explorationCellSize / 2,
-                    z * explorationCellSize + explorationCellSize / 2
-                );
-                explorationInstancedMesh.setMatrixAt(index, tempMatrix);
-                index++;
-            }
-        }
-    }
-    explorationInstancedMesh.instanceMatrix.needsUpdate = true;
-}
-
-// Sector exploration calculation removed; visualization retained in 3D fog
 
 function setupEventListeners() {
     // Simulation controls - start is automatic, no start button needed
@@ -1192,37 +920,6 @@ function setupEventListeners() {
     // Map click for pathfinding
     mapCanvas.addEventListener('click', (event) => {
         handleMapClick(event);
-    });
-
-    // Zoom controls
-    btnZoomIn.addEventListener('click', () => {
-        const distance = camera.position.distanceTo(controls.target);
-        const newDistance = Math.max(distance * 0.8, 100); // Zoom in 20%, min 100
-        const direction = camera.position.clone().sub(controls.target).normalize();
-        camera.position.copy(controls.target).add(direction.multiplyScalar(newDistance));
-    });
-
-    btnZoomOut.addEventListener('click', () => {
-        const distance = camera.position.distanceTo(controls.target);
-        const newDistance = Math.min(distance * 1.25, 1500); // Zoom out 25%, max 1500
-        const direction = camera.position.clone().sub(controls.target).normalize();
-        camera.position.copy(controls.target).add(direction.multiplyScalar(newDistance));
-    });
-
-    btnZoomReset.addEventListener('click', () => {
-        camera.position.set(600, -200, 500);
-        controls.target.set(250, 250, 250);
-        controls.update();
-    });
-
-    // The Veil(the 100 refference) toggle
-    btnFogToggle.addEventListener('click', () => {
-        fogOfWarEnabled = !fogOfWarEnabled;
-        if (explorationInstancedMesh) {
-            explorationInstancedMesh.visible = fogOfWarEnabled;
-        }
-        btnFogToggle.style.opacity = fogOfWarEnabled ? '1' : '0.5';
-        btnFogToggle.title = fogOfWarEnabled ? 'Hide The Veil' : 'Show The Veil';
     });
 }
 
@@ -1314,10 +1011,7 @@ function updateState(data) {
     // Update fitness stats
     updateFitnessStats();
 
-    // Update 3D scene with agent-based exploration visualization
-    updateAgents3D(data.agents);
-    updateExplorationFromAgents(data.agents);
-    updateObstacles3D(data.obstacles);
+    environmentView?.update(navigationWorld(data));
 
     // Update 2D map
     updateMap2D(data.explored_grid, data.threat_map, data.agents, data.obstacles);
@@ -1455,23 +1149,7 @@ function updateExperimentProgressBar(progressData) {
 
 // Calculate 3D exploration percentage from grid data
 function calculate3DExplorationPercentage() {
-    if (!explorationGridData) return 0;
-    
-    let totalCells = 0;
-    let exploredCells = 0;
-    
-    for (let x = 0; x < EXPLORATION_GRID_SIZE; x++) {
-        for (let y = 0; y < EXPLORATION_GRID_SIZE; y++) {
-            for (let z = 0; z < EXPLORATION_GRID_SIZE; z++) {
-                totalCells++;
-                if (explorationGridData[x][y][z] === 1) {
-                    exploredCells++;
-                }
-            }
-        }
-    }
-    
-    return totalCells > 0 ? (exploredCells / totalCells) * 100 : 0;
+    return environmentView?.getExplorationPercentage() || 0;
 }
 
 // Update progress bar
@@ -1498,50 +1176,6 @@ function updateStopButtonState() {
         btnStop.textContent = '⏸ Pause';
         btnStop.classList.remove('btn-success');
         btnStop.classList.add('btn-danger');
-    }
-}
-
-function updateAgents3D(agentsData) {
-    while (agentsMesh.length < agentsData.length) {
-        const geometry = new THREE.SphereGeometry(4, 16, 16);
-        const material = new THREE.MeshPhongMaterial({ color: 0xf0f0ec });
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-        agentsMesh.push(mesh);
-    }
-
-    while (agentsMesh.length > agentsData.length) {
-        const mesh = agentsMesh.pop();
-        scene.remove(mesh);
-    }
-
-    agentsData.forEach((agent, i) => {
-        const mesh = agentsMesh[i];
-        mesh.position.set(agent.x, agent.y, agent.z);
-
-        let color = 0xf0f0ec;
-        if (agent.profile === 'Offensive') color = 0x8e54de;
-        if (agent.profile === 'Defensive') color = 0x85857f;
-
-        mesh.material.color.setHex(color);
-    });
-}
-
-function updateObstacles3D(obstaclesData) {
-    if (obstaclesMesh.length === 0 && obstaclesData.length > 0) {
-        obstaclesData.forEach(obs => {
-            const geometry = new THREE.BoxGeometry(obs.w, obs.w, obs.h);
-            const material = new THREE.MeshPhongMaterial({
-                color: 0x8e54de,
-                transparent: true,
-                opacity: 0.62,
-                emissive: 0x232321
-            });
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.set(obs.x, obs.y, obs.z + obs.h / 2);
-            scene.add(mesh);
-            obstaclesMesh.push(mesh);
-        });
     }
 }
 
@@ -1636,40 +1270,24 @@ function updateMap2D(exploredGrid, threatMap, agents, obstacles) {
 
 // 3D Path Drawing Functions
 function drawPath3D(path, color, name) {
-    if (pathLines3D[name]) {
-        scene.remove(pathLines3D[name]);
-    }
-
-    if (path.length < 2) return;
-
-    const points = path.map(p => new THREE.Vector3(p.x, p.y, p.z || 250));
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
-    const line = new THREE.Line(geometry, material);
-    
-    scene.add(line);
-    pathLines3D[name] = line;
+    environmentView?.setPath(name, path.map(point => ({
+        x: point.x,
+        y: point.y,
+        z: point.z ?? envDimensions.depth / 2
+    })), color);
 }
 
 function clearPaths3D() {
-    Object.keys(pathLines3D).forEach(key => {
-        if (pathLines3D[key]) {
-            scene.remove(pathLines3D[key]);
-            pathLines3D[key] = null;
-        }
-    });
+    environmentView?.clearPaths();
 }
 
 function drawManualPath3D() {
     if (manualWaypoints.length < 2) return;
-    drawPath3D(manualWaypoints, 0xffff00, 'manual');
+    drawPath3D(manualWaypoints, THEME.signal, 'manual');
 }
 
 function clearManualPath3D() {
-    if (pathLines3D.manual) {
-        scene.remove(pathLines3D.manual);
-        pathLines3D.manual = null;
-    }
+    environmentView?.clearPath('manual');
 }
 
 // Pathfinding
@@ -1721,10 +1339,10 @@ async function findPath() {
         balancedPath = data.balanced.path;
 
         // Draw paths in 3D
-        drawPath3D(dijkstraPath, PATH_COLORS_3D.dijkstra, 'dijkstra');
-        drawPath3D(astarPath, PATH_COLORS_3D.astar, 'astar');
-        drawPath3D(safetyPath, PATH_COLORS_3D.safety, 'safety');
-        drawPath3D(balancedPath, PATH_COLORS_3D.balanced, 'balanced');
+        drawPath3D(dijkstraPath, PATH_COLORS.dijkstra, 'dijkstra');
+        drawPath3D(astarPath, PATH_COLORS.astar, 'astar');
+        drawPath3D(safetyPath, PATH_COLORS.safety, 'safety');
+        drawPath3D(balancedPath, PATH_COLORS.balanced, 'balanced');
 
         pathLegend.classList.add('visible');
         redrawMap();

@@ -42,7 +42,7 @@ class SimulationSmokeTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Adaptive Swarm Navigation", response.data)
-        self.assertIn(b"Swarm Command Center", response.data)
+        self.assertIn(b"3D Environment View", response.data)
 
     def test_step_returns_complete_world_state(self) -> None:
         response = self.client.get("/step")

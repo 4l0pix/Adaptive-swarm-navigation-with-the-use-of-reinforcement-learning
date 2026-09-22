@@ -1,4 +1,5 @@
 from flask import Flask, render_template, jsonify, request, send_file
+from swarm_nav.web import create_assets_blueprint
 import numpy as np
 import csv
 import io
@@ -23,6 +24,7 @@ from agent import Agent
 import math
 
 app = Flask(__name__)
+app.register_blueprint(create_assets_blueprint(), url_prefix='/swarm-nav')
 
 # Simulation state
 class SimulationState:
@@ -169,8 +171,9 @@ def _advance_simulation_step():
 
     # Prepare response data
     agents_data = []
-    for agent in sim_state.agents:
+    for agent_id, agent in enumerate(sim_state.agents):
         agents_data.append({
+            'id': agent_id,
             'x': float(agent.position[0]),
             'y': float(agent.position[1]),
             'z': float(agent.position[2]),
@@ -178,8 +181,9 @@ def _advance_simulation_step():
         })
 
     obstacles_data = []
-    for obs in sim_state.obstacles:
+    for obstacle_id, obs in enumerate(sim_state.obstacles):
         obstacles_data.append({
+            'id': obstacle_id,
             'x': float(obs['position'][0]),
             'y': float(obs['position'][1]),
             'z': float(obs['position'][2]),

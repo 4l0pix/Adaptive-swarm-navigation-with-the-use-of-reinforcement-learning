@@ -11,6 +11,82 @@ python -m pip install -e .
 Use `python -m pip install -e '.[web]'` to include the existing browser sandbox.
 Python 3.11 or newer is required.
 
+## Mount the versioned environment viewer
+
+Version 0.7 adds `EnvironmentView`, the browser API used by the thesis dashboard
+itself. Register its Flask asset blueprint once in each application:
+
+```python
+from flask import Flask
+from swarm_nav.web import create_assets_blueprint
+
+app = Flask(__name__)
+app.register_blueprint(create_assets_blueprint(), url_prefix="/swarm-nav")
+```
+
+Load the packaged stylesheet and ES module from the same stable paths:
+
+```html
+<link rel="stylesheet" href="/swarm-nav/assets/environment-view.css">
+<script type="module">
+  import { EnvironmentView } from "/swarm-nav/assets/environment-view.js";
+</script>
+```
+
+The host page must provide an import map for `three` and `three/addons/`. The
+viewer then owns the Three.js scene, camera, lighting, grid, axes, boundary,
+nest, agents, obstacles, exploration veil, resize lifecycle, animation loop,
+controls, and component-specific labels and styles.
+
+```javascript
+const view = new EnvironmentView(container, {
+    size: 500,
+    nest: { x: 10, y: 250, z: 250 },
+    agents: [{ id: 0, x: 10, y: 250, z: 250, profile: "Neutral" }],
+    obstacles: [{ id: "tower", x: 120, y: 180, z: 0, w: 12, h: 90 }],
+});
+
+view.update(nextWorld);
+view.dispose();
+```
+
+`size` and every coordinate must be finite numbers; `size`, obstacle `w`, and
+obstacle `h` must be positive. Agent and obstacle IDs must be unique within
+their arrays. Agent `profile` must be a non-empty string. Construction and
+updates validate the complete value before changing the scene and throw a
+`TypeError` naming the invalid field.
+
+Calling `update()` reconciles agents and obstacles by ID, including removing
+surplus meshes and rebuilding geometry when obstacle dimensions change. The
+viewer also exposes `setPath(name, points, color)`, `clearPath(name)`, and
+`clearPaths()` for host-specific route overlays, plus
+`getExplorationPercentage()` for the thesis experiment summary. These overlay
+methods do not transfer ownership of the scene to the host application.
+
+Call `dispose()` before replacing a viewer or leaving the page. It stops the
+animation loop, disconnects resize observers and event listeners, disposes GPU
+resources and controls, and removes the generated canvas and toolbar. A disposed
+viewer rejects later updates.
+
+Keep application-specific state behind a small adapter:
+
+```javascript
+function navigationWorld(snapshot) {
+    return {
+        size: snapshot.world.size,
+        nest: snapshot.world.nest,
+        agents: snapshot.world.agents,
+        obstacles: snapshot.world.obstacles,
+    };
+}
+
+environmentView.update(navigationWorld(snapshot));
+```
+
+Do not copy the module into a consuming application. Installing `swarm-nav`
+and registering its blueprint ensures every dashboard receives the same viewer
+implementation and control behavior.
+
 ## Build a world one function at a time
 
 ```python
@@ -222,8 +298,9 @@ centers, while node count is the number of waypoints.
 
 ## Baseline and compatibility
 
-Version 0.6 provides a new research execution baseline. The browser sandbox keeps
-its existing v0.5 workflow. The library reuses its Boids, avoidance, exploration,
+Version 0.7 retains the v0.6 research execution baseline and adds the packaged
+browser API. The browser sandbox keeps its existing v0.5 workflow while consuming
+that shared component. The library reuses its Boids, avoidance, exploration,
 profile definitions, and planners, with these explicit differences:
 
 - Reproducible random streams per world, deployment, and agent.

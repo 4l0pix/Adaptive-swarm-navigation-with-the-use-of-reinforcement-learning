@@ -1,6 +1,6 @@
 # Adaptive Swarm Navigation with Reinforcement Learning
 
-This repository brings together my BSc thesis, the version 0.5 simulation sandbox, a modular Python research API (v0.6), and the experiment data behind the project. The work was completed at the Department of Computer Science and Telecommunications, University of Thessaly, under the supervision of Associate Professor Konstantinos Kolomvatsos.
+This repository brings together my BSc thesis, the version 0.5 simulation sandbox, a modular Python research API and shared environment viewer (v0.7), and the experiment data behind the project. The work was completed at the Department of Computer Science and Telecommunications, University of Thessaly, under the supervision of Associate Professor Konstantinos Kolomvatsos.
 
 <p align="center">
   <a href="https://ir.lib.uth.gr/xmlui/"><img alt="Thesis at the UTH Library" src="https://img.shields.io/badge/thesis-UTH_Library-b42318?style=flat-square"></a>
